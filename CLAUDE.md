@@ -219,15 +219,15 @@ Infrastructure managed with Terraform in `terraform/environments/production/`.
 
 ```bash
 # Initialize Terraform backend (once)
-aws s3 mb s3://facilitator-terraform-state --region us-east-1
+aws s3 mb s3://facilitator-terraform-state --region us-east-2
 aws dynamodb create-table --table-name facilitator-terraform-locks \
   --attribute-definitions AttributeName=LockID,AttributeType=S \
   --key-schema AttributeName=LockID,KeyType=HASH \
-  --billing-mode PAY_PER_REQUEST --region us-east-1
+  --billing-mode PAY_PER_REQUEST --region us-east-2
 
 # Create ECR repository (once)
 aws ecr create-repository --repository-name facilitator \
-  --image-scanning-configuration scanOnPush=true --region us-east-1
+  --image-scanning-configuration scanOnPush=true --region us-east-2
 
 # Build and push Docker image
 ./scripts/build-and-push.sh v1.0.0
@@ -240,10 +240,10 @@ terraform apply facilitator-prod.tfplan
 
 # Update running service
 aws ecs update-service --cluster facilitator-production \
-  --service facilitator-production --force-new-deployment --region us-east-1
+  --service facilitator-production --force-new-deployment --region us-east-2
 ```
 
-**Production URL**: `https://facilitator.prod.ultravioletadao.xyz` (currently)
+**Production URL**: `https://facilitator.ultravioletadao.xyz` (currently)
 **Target URL**: `https://facilitator.ultravioletadao.xyz` (after old stack destroyed)
 
 **Cost estimate**: ~$43-48/month (Fargate 1vCPU/2GB, ALB, NAT instance)

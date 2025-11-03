@@ -23,7 +23,7 @@ Complete checklist for deploying Karmacadabra agents to AWS ECS Fargate.
 - [ ] Docker installed and running (`docker --version`)
 - [ ] jq installed for JSON parsing (`jq --version`)
 - [ ] Git repository cloned
-- [ ] AWS region selected (default: us-east-1)
+- [ ] AWS region selected (default: us-east-2)
 
 ### Secrets Manager Setup
 
@@ -128,7 +128,7 @@ make push-validator
 ```bash
 make update-services
 # or manually:
-aws ecs update-service --cluster karmacadabra-prod --service karmacadabra-prod-validator --force-new-deployment
+aws ecs update-service --cluster facilitator-production --service facilitator-production --force-new-deployment --region us-east-2
 ```
 
 - [ ] All services updated

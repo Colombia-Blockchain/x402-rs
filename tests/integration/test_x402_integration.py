@@ -51,8 +51,8 @@ def get_test_buyer():
     # Try AWS Secrets Manager
     try:
         import boto3
-        secrets_client = boto3.client('secretsmanager', region_name='us-east-1')
-        response = secrets_client.get_secret_value(SecretId='karmacadabra')
+        secrets_client = boto3.client('secretsmanager', region_name='us-east-2')
+        response = secrets_client.get_secret_value(SecretId='facilitator-test-buyer')
         agents_config = json.loads(response['SecretString'])
 
         # Priority 1: client-agent (funded)

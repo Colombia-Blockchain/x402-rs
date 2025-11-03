@@ -39,10 +39,10 @@ from typing import Dict
 # Configuration
 # ============================================================================
 
-AWS_SECRET_NAME = "karmacadabra-facilitator"
-AWS_REGION = "us-east-1"
-ECS_CLUSTER = "karmacadabra-prod"
-ECS_SERVICE = "karmacadabra-prod-facilitator"
+AWS_SECRET_NAME = "facilitator-evm-private-key"
+AWS_REGION = "us-east-2"
+ECS_CLUSTER = "facilitator-production"
+ECS_SERVICE = "facilitator-production"
 
 # Network information
 NETWORKS = {

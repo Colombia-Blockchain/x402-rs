@@ -9,7 +9,7 @@ This document records the facilitator wallet rotation performed on 2025-10-26 to
 **Address:** `0x103040545AC5031A11E8C03dd11324C7333a13C7`
 
 **Security:**
-- Private key stored in AWS Secrets Manager: `karmacadabra-facilitator` (us-east-1)
+- Private key stored in AWS Secrets Manager: `facilitator-evm-private-key` (us-east-2)
 - NEVER stored in .env files or local temporary files
 - Fetched at runtime by ECS Fargate tasks via IAM role permissions
 
@@ -143,8 +143,8 @@ for name, rpc in networks.items():
 ```bash
 # Verify wallet address in AWS (private key is redacted)
 aws secretsmanager get-secret-value \
-  --secret-id karmacadabra-facilitator \
-  --region us-east-1 \
+  --secret-id facilitator-evm-private-key \
+  --region us-east-2 \
   --query 'SecretString' \
   --output text | python -c "import sys, json; s=json.load(sys.stdin); print(f\"Address: {s['address']}\nPrivate Key: {s['private_key'][:6]}...{s['private_key'][-4:]}\")"
 ```
@@ -163,10 +163,10 @@ curl -s https://facilitator.ultravioletadao.xyz/supported | python -m json.tool
 
 ```bash
 # Latest logs showing wallet initialization
-aws logs tail /ecs/karmacadabra-prod/facilitator \
+aws logs tail /ecs/facilitator-production/facilitator \
   --since 1h \
   --format short \
-  --region us-east-1 \
+  --region us-east-2 \
   | grep -i "initialized provider\|signers="
 ```
 
@@ -175,15 +175,15 @@ aws logs tail /ecs/karmacadabra-prod/facilitator \
 ```bash
 # Current running tasks
 aws ecs list-tasks \
-  --cluster karmacadabra-prod \
-  --service-name karmacadabra-prod-facilitator \
-  --region us-east-1
+  --cluster facilitator-production \
+  --service-name facilitator-production \
+  --region us-east-2
 
 # Task details
 aws ecs describe-tasks \
-  --cluster karmacadabra-prod \
+  --cluster facilitator-production \
   --tasks <TASK_ARN> \
-  --region us-east-1
+  --region us-east-2
 ```
 
 ## Security Best Practices
@@ -206,8 +206,8 @@ aws ecs describe-tasks \
    - Base: Alert at < 0.1 ETH
 
 4. **Access Control**
-   - ECS task IAM role has permission to read `karmacadabra-facilitator` secret
-   - No other services should have access to this secret
+   - ECS task IAM role has permission to read `facilitator-evm-private-key` and `facilitator-solana-keypair` secrets
+   - No other services should have access to these secrets
    - Manual access via AWS CLI requires admin credentials
 
 ## Next Rotation
@@ -232,9 +232,9 @@ To rotate the wallet in the future:
 
 ## References
 
-- Facilitator deployment: `terraform/ecs-fargate/`
-- AWS Secrets: `karmacadabra-facilitator` in us-east-1
-- ECS Service: `karmacadabra-prod-facilitator` in cluster `karmacadabra-prod`
+- Facilitator deployment: `terraform/environments/production/`
+- AWS Secrets: `facilitator-evm-private-key`, `facilitator-solana-keypair` in us-east-2
+- ECS Service: `facilitator-production` in cluster `facilitator-production`
 - Public endpoint: https://facilitator.ultravioletadao.xyz
 - Rotation script: `scripts/rotate-facilitator-wallet.py`
 

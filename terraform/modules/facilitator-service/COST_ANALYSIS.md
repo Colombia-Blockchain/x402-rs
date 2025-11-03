@@ -60,7 +60,7 @@ Detailed cost breakdown and optimization strategies for Karmacadabra agent deplo
 
 ## Detailed Cost Analysis
 
-### Fargate Pricing (us-east-1)
+### Fargate Pricing (us-east-2)
 
 #### On-Demand Pricing
 - **vCPU**: $0.04048/hour
@@ -311,19 +311,21 @@ enable_container_insights = false  # Disable (not recommended)
 aws application-autoscaling put-scheduled-action \
   --service-namespace ecs \
   --scalable-dimension ecs:service:DesiredCount \
-  --resource-id service/karmacadabra-prod/karmacadabra-prod-validator \
+  --resource-id service/facilitator-production/facilitator-production \
   --scheduled-action-name scale-down-evening \
   --schedule "cron(0 18 * * MON-FRI *)" \
-  --scalable-target-action MinCapacity=0,MaxCapacity=0
+  --scalable-target-action MinCapacity=0,MaxCapacity=0 \
+  --region us-east-2
 
 # Scale up at 9 AM weekdays
 aws application-autoscaling put-scheduled-action \
   --service-namespace ecs \
   --scalable-dimension ecs:service:DesiredCount \
-  --resource-id service/karmacadabra-prod/karmacadabra-prod-validator \
+  --resource-id service/facilitator-production/facilitator-production \
   --scheduled-action-name scale-up-morning \
   --schedule "cron(0 9 * * MON-FRI *)" \
-  --scalable-target-action MinCapacity=1,MaxCapacity=2
+  --scalable-target-action MinCapacity=1,MaxCapacity=2 \
+  --region us-east-2
 ```
 
 **Result**: ~$40-55/month (business hours only)

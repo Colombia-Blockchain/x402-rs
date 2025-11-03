@@ -19,10 +19,10 @@ EXPECTED_MAINNET_WALLET = "0x103040545AC5031A11E8C03dd11324C7333a13C7"
 print("\n[1] AWS SECRETS MANAGER")
 print("-" * 80)
 
-client = boto3.client('secretsmanager', region_name='us-east-1')
+client = boto3.client('secretsmanager', region_name='us-east-2')
 
 try:
-    response = client.get_secret_value(SecretId='karmacadabra-facilitator-mainnet')
+    response = client.get_secret_value(SecretId='facilitator-evm-private-key')
     config = json.loads(response['SecretString'])
     facilitator_address = config['address']
     print(f"Facilitator Address: {facilitator_address}")
@@ -107,7 +107,7 @@ print("\n[3] TEST WALLET ADDRESSES")
 print("-" * 80)
 
 try:
-    response = client.get_secret_value(SecretId='karmacadabra-test-buyer')
+    response = client.get_secret_value(SecretId='facilitator-test-buyer')
     config = json.loads(response['SecretString'])
     buyer_address = config['address']
     print(f"Test Buyer:  {buyer_address}")
@@ -116,7 +116,7 @@ except Exception as e:
     buyer_address = None
 
 try:
-    response = client.get_secret_value(SecretId='karmacadabra-test-seller')
+    response = client.get_secret_value(SecretId='facilitator-test-seller')
     config = json.loads(response['SecretString'])
     seller_address = config['address']
     print(f"Test Seller: {seller_address}")

@@ -26,8 +26,8 @@ def get_buyer():
 
     try:
         import boto3
-        client = boto3.client('secretsmanager', region_name='us-east-1')
-        response = client.get_secret_value(SecretId='karmacadabra')
+        client = boto3.client('secretsmanager', region_name='us-east-2')
+        response = client.get_secret_value(SecretId='facilitator-test-buyer')
         config = json.loads(response['SecretString'])
         if 'client-agent' in config:
             return config['client-agent'].get('private_key')

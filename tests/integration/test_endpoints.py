@@ -261,7 +261,7 @@ def print_summary(facilitator_results: Dict[str, bool], agent_results: Dict[str,
 
         if not all(facilitator_results.values()):
             print("  Facilitator issues:")
-            print("    - Check ECS service: karmacadabra-prod-facilitator")
+            print("    - Check ECS service: facilitator-production (us-east-2)")
             print("    - Check CloudWatch logs")
             print("    - Verify domain: facilitator.ultravioletadao.xyz")
 
@@ -270,12 +270,16 @@ def print_summary(facilitator_results: Dict[str, bool], agent_results: Dict[str,
             print("  Agent issues:")
             for name in failing_agents:
                 service_name = name.lower().replace(" ", "-")
-                print(f"    - {name}: Check ECS service karmacadabra-prod-{service_name}")
+                print(f"    - {name}: Check ECS service karmacadabra-prod-{service_name} (us-east-1)")
 
         print()
         print("  AWS ECS commands:")
-        print("    aws ecs describe-services --cluster karmacadabra-prod --services \\")
-        print("      karmacadabra-prod-facilitator \\")
+        print("    # Facilitator (us-east-2):")
+        print("    aws ecs describe-services --region us-east-2 --cluster facilitator-production --services \\")
+        print("      facilitator-production")
+        print()
+        print("    # Karmacadabra agents (us-east-1):")
+        print("    aws ecs describe-services --region us-east-1 --cluster karmacadabra-prod --services \\")
         print("      karmacadabra-prod-validator \\")
         print("      karmacadabra-prod-karma-hello \\")
         print("      karmacadabra-prod-abracadabra \\")

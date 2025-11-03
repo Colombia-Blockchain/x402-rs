@@ -36,29 +36,25 @@ curl http://<ALB_DNS>/voice-extractor/health
 
 ```bash
 # Tail logs
-make logs-validator
-make logs-karma-hello
-make logs-abracadabra
-make logs-skill-extractor
-make logs-voice-extractor
-
-# Or manually
-aws logs tail /ecs/karmacadabra-prod/validator --follow
+aws logs tail /ecs/facilitator-production/facilitator --follow --region us-east-2
 ```
 
 ## Scaling
 
 ```bash
-# Scale all services
-make scale-up    # Scale to 2 tasks
-make scale-down  # Scale to 1 task
-make scale-zero  # Scale to 0 tasks (stop all)
-
-# Scale specific service
+# Scale service
 aws ecs update-service \
-  --cluster karmacadabra-prod \
-  --service karmacadabra-prod-validator \
-  --desired-count 2
+  --cluster facilitator-production \
+  --service facilitator-production \
+  --desired-count 2 \
+  --region us-east-2
+
+# Scale to 0 (stop)
+aws ecs update-service \
+  --cluster facilitator-production \
+  --service facilitator-production \
+  --desired-count 0 \
+  --region us-east-2
 ```
 
 ## Debugging
@@ -66,23 +62,26 @@ aws ecs update-service \
 ```bash
 # Get task ID
 TASK_ID=$(aws ecs list-tasks \
-  --cluster karmacadabra-prod \
-  --service-name karmacadabra-prod-validator \
+  --cluster facilitator-production \
+  --service-name facilitator-production \
+  --region us-east-2 \
   --query 'taskArns[0]' \
   --output text | cut -d'/' -f3)
 
 # SSH into container (ECS Exec)
 aws ecs execute-command \
-  --cluster karmacadabra-prod \
+  --cluster facilitator-production \
   --task $TASK_ID \
-  --container validator \
+  --container facilitator \
+  --region us-east-2 \
   --interactive \
   --command '/bin/bash'
 
 # View task details
 aws ecs describe-tasks \
-  --cluster karmacadabra-prod \
-  --tasks $TASK_ID
+  --cluster facilitator-production \
+  --tasks $TASK_ID \
+  --region us-east-2
 ```
 
 ## Update Docker Images
@@ -102,9 +101,10 @@ docker push $ECR_URL:latest
 
 # Force new deployment
 aws ecs update-service \
-  --cluster karmacadabra-prod \
-  --service karmacadabra-prod-validator \
-  --force-new-deployment
+  --cluster facilitator-production \
+  --service facilitator-production \
+  --force-new-deployment \
+  --region us-east-2
 ```
 
 ## Monitoring
@@ -122,11 +122,12 @@ make health-check
 aws cloudwatch get-metric-statistics \
   --namespace AWS/ECS \
   --metric-name CPUUtilization \
-  --dimensions Name=ServiceName,Value=karmacadabra-prod-validator Name=ClusterName,Value=karmacadabra-prod \
+  --dimensions Name=ServiceName,Value=facilitator-production Name=ClusterName,Value=facilitator-production \
   --start-time $(date -u -d '1 hour ago' +%Y-%m-%dT%H:%M:%S) \
   --end-time $(date -u +%Y-%m-%dT%H:%M:%S) \
   --period 300 \
-  --statistics Average
+  --statistics Average \
+  --region us-east-2
 ```
 
 ## Cost Management
@@ -148,12 +149,13 @@ aws ce get-cost-and-usage \
 ### Tasks Not Starting
 ```bash
 # Check logs
-aws logs tail /ecs/karmacadabra-prod/validator --follow
+aws logs tail /ecs/facilitator-production/facilitator --follow --region us-east-2
 
 # Check task stopped reason
 aws ecs describe-tasks \
-  --cluster karmacadabra-prod \
+  --cluster facilitator-production \
   --tasks $TASK_ID \
+  --region us-east-2 \
   --query 'tasks[0].stoppedReason'
 ```
 
@@ -172,8 +174,9 @@ aws ec2 describe-security-groups \
 ```bash
 # Check Fargate Spot usage
 aws ecs describe-services \
-  --cluster karmacadabra-prod \
-  --services karmacadabra-prod-validator \
+  --cluster facilitator-production \
+  --services facilitator-production \
+  --region us-east-2 \
   --query 'services[0].capacityProviderStrategy'
 
 # Check NAT data transfer
@@ -248,15 +251,17 @@ make scale-up
 ```bash
 # Get previous task definition revision
 aws ecs describe-services \
-  --cluster karmacadabra-prod \
-  --services karmacadabra-prod-validator \
+  --cluster facilitator-production \
+  --services facilitator-production \
+  --region us-east-2 \
   --query 'services[0].deployments[1].taskDefinition'
 
 # Update service to previous revision
 aws ecs update-service \
-  --cluster karmacadabra-prod \
-  --service karmacadabra-prod-validator \
-  --task-definition karmacadabra-prod-validator:REVISION_NUMBER
+  --cluster facilitator-production \
+  --service facilitator-production \
+  --region us-east-2 \
+  --task-definition facilitator-production:REVISION_NUMBER
 ```
 
 ### Destroy Everything (WARNING)
@@ -279,18 +284,20 @@ make destroy
 aws application-autoscaling put-scheduled-action \
   --service-namespace ecs \
   --scalable-dimension ecs:service:DesiredCount \
-  --resource-id service/karmacadabra-prod/karmacadabra-prod-validator \
+  --resource-id service/facilitator-production/facilitator-production \
   --scheduled-action-name scale-down-evening \
   --schedule "cron(0 18 * * MON-FRI *)" \
+  --region us-east-2 \
   --scalable-target-action MinCapacity=0,MaxCapacity=0
 
 # Scale up at 9 AM
 aws application-autoscaling put-scheduled-action \
   --service-namespace ecs \
   --scalable-dimension ecs:service:DesiredCount \
-  --resource-id service/karmacadabra-prod/karmacadabra-prod-validator \
+  --resource-id service/facilitator-production/facilitator-production \
   --scheduled-action-name scale-up-morning \
   --schedule "cron(0 9 * * MON-FRI *)" \
+  --region us-east-2 \
   --scalable-target-action MinCapacity=1,MaxCapacity=3
 ```
 
@@ -298,11 +305,16 @@ aws application-autoscaling put-scheduled-action \
 ```bash
 # Update secrets in AWS Secrets Manager
 aws secretsmanager update-secret \
-  --secret-id karmacadabra \
-  --secret-string file://secrets.json
+  --secret-id facilitator-evm-private-key \
+  --secret-string file://secrets.json \
+  --region us-east-2
 
 # Force new deployment to pick up new secrets
-make update-services
+aws ecs update-service \
+  --cluster facilitator-production \
+  --service facilitator-production \
+  --force-new-deployment \
+  --region us-east-2
 ```
 
 ## Performance Tuning

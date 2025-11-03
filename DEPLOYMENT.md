@@ -587,6 +587,6 @@ nano .env  # Change RPC_URL_AVALANCHE_FUJI
 
 ---
 
-**Deployment Status**: ✅ Deployed to production at facilitator.prod.ultravioletadao.xyz
+**Deployment Status**: ✅ Deployed to production at facilitator.ultravioletadao.xyz
 
 **Current Configuration**: Using native USDC tokens on 13 networks (Base, Avalanche, Polygon, Optimism, Celo, HyperEVM, Solana + testnets)

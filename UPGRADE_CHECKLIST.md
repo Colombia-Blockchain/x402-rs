@@ -131,9 +131,9 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 - [ ] Review: `git log -1 -p`
 
 ### Deploy (DANGER ZONE)
-- [ ] Push: `git push origin karmacadabra-production`
-- [ ] Deploy ECS: `aws ecs update-service --cluster karmacadabra-prod --service karmacadabra-prod-facilitator --force-new-deployment --region us-east-1`
-- [ ] Monitor: `aws ecs describe-services --cluster karmacadabra-prod --services karmacadabra-prod-facilitator --region us-east-1 --query 'services[0].deployments'`
+- [ ] Push: `git push origin main`
+- [ ] Deploy ECS: `aws ecs update-service --cluster facilitator-production --service facilitator-production --force-new-deployment --region us-east-2`
+- [ ] Monitor: `aws ecs describe-services --cluster facilitator-production --services facilitator-production --region us-east-2 --query 'services[0].deployments'`
 - [ ] Wait 60 seconds for deployment
 
 ---
@@ -141,29 +141,21 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 ## Post-Deployment Verification
 
 ### Production Checks
-- [ ] Health: `curl https://facilitator.karmacadabra.ultravioletadao.xyz/health`
+- [ ] Health: `curl https://facilitator.ultravioletadao.xyz/health`
   - [ ] Returns 200 OK
-- [ ] Branding: `curl https://facilitator.karmacadabra.ultravioletadao.xyz/ | Select-String "Ultravioleta"`
+- [ ] Branding: `curl https://facilitator.ultravioletadao.xyz/ | Select-String "Ultravioleta"`
   - [ ] Output contains "Ultravioleta"
-- [ ] Payment test: `cd scripts && python test_glue_payment_simple.py --production`
+- [ ] Payment test: `cd tests/integration && python test_usdc_payment.py --network base-mainnet`
   - [ ] Payment succeeds
 
-### Agent Health (Facilitator Dependencies)
-- [ ] Validator: `curl https://validator.karmacadabra.ultravioletadao.xyz/health`
-- [ ] Karma-hello: `curl https://karma-hello.karmacadabra.ultravioletadao.xyz/health`
-- [ ] Abracadabra: `curl https://abracadabra.karmacadabra.ultravioletadao.xyz/health`
-- [ ] Voice-extractor: `curl https://voice-extractor.karmacadabra.ultravioletadao.xyz/health`
-- [ ] Skill-extractor: `curl https://skill-extractor.karmacadabra.ultravioletadao.xyz/health`
-
 ### ECS Logs
-- [ ] Check for errors: `aws logs tail /ecs/karmacadabra-prod-facilitator --follow --region us-east-1`
+- [ ] Check for errors: `aws logs tail /ecs/facilitator-production/facilitator --follow --region us-east-2`
   - [ ] No errors in last 5 minutes
 
 ### End-to-End Test
-- [ ] Full purchase flow: `cd scripts && python scripts/demo_client_purchases.py --production`
-  - [ ] Client can purchase from karma-hello
-  - [ ] Client can purchase from abracadabra
-  - [ ] Transactions appear on Snowtrace
+- [ ] Full payment test: `cd tests/integration && python test_facilitator.py`
+  - [ ] All networks operational
+  - [ ] Payment verification succeeds
 
 ---
 
@@ -189,15 +181,15 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 ## Emergency Rollback (If Production Breaks)
 
 ### Immediate Rollback
-- [ ] Get current revision: `aws ecs describe-services --cluster karmacadabra-prod --services karmacadabra-prod-facilitator --region us-east-1 --query 'services[0].taskDefinition'`
+- [ ] Get current revision: `aws ecs describe-services --cluster facilitator-production --services facilitator-production --region us-east-2 --query 'services[0].taskDefinition'`
 - [ ] Note revision number: `_________________`
-- [ ] Rollback: `aws ecs update-service --cluster karmacadabra-prod --service karmacadabra-prod-facilitator --task-definition karmacadabra-prod-facilitator:[PREVIOUS_REVISION] --force-new-deployment --region us-east-1`
-- [ ] Verify: `curl https://facilitator.karmacadabra.ultravioletadao.xyz/health`
+- [ ] Rollback: `aws ecs update-service --cluster facilitator-production --service facilitator-production --task-definition facilitator-production:[PREVIOUS_REVISION] --force-new-deployment --region us-east-2`
+- [ ] Verify: `curl https://facilitator.ultravioletadao.xyz/health`
 
 ### Git Rollback
 - [ ] Find last good commit: `git log --oneline -5`
 - [ ] Revert: `git revert HEAD` or `git reset --hard [COMMIT]`
-- [ ] Push: `git push origin karmacadabra-production --force` (if reset was used)
+- [ ] Push: `git push origin main --force` (if reset was used)
 
 ### Restore from Backup
 - [ ] Copy backup: `cp $BACKUP/* x402-rs/ -Recurse -Force`

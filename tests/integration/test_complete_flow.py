@@ -114,8 +114,8 @@ def get_test_buyer() -> Optional[str]:
 
     # Try AWS Secrets Manager - prioritize client-agent
     try:
-        secrets_client = boto3.client('secretsmanager', region_name='us-east-1')
-        response = secrets_client.get_secret_value(SecretId='karmacadabra')
+        secrets_client = boto3.client('secretsmanager', region_name='us-east-2')
+        response = secrets_client.get_secret_value(SecretId='facilitator-test-buyer')
         agents_config = json.loads(response['SecretString'])
 
         # Priority 1: client-agent (mentioned as funded)
@@ -501,8 +501,8 @@ def run_complete_flow(iteration: int = 1) -> bool:
     print(f"\n4c. Seller → Validator rating...")
     # This requires seller's key from AWS
     try:
-        secrets_client = boto3.client('secretsmanager', region_name='us-east-1')
-        response = secrets_client.get_secret_value(SecretId='karmacadabra-agents')
+        secrets_client = boto3.client('secretsmanager', region_name='us-east-2')
+        response = secrets_client.get_secret_value(SecretId='facilitator-test-seller')
         agents_config = json.loads(response['SecretString'])
         seller_key = agents_config.get('karma-hello-agent', {}).get('private_key')
 

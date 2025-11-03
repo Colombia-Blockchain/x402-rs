@@ -191,10 +191,10 @@ Testing via custom domains...
 ### Check Service Status
 
 ```bash
-# All services at once
+# Facilitator service status
 aws ecs describe-services \
-  --cluster karmacadabra-prod \
-  --services karmacadabra-prod-validator karmacadabra-prod-karma-hello \
+  --cluster facilitator-production \
+  --services facilitator-production \
   --query 'services[*].[serviceName,desiredCount,runningCount,deployments[0].rolloutState]' \
   --output table
 ```
@@ -203,29 +203,24 @@ aws ecs describe-services \
 
 ```bash
 # Stream logs live
-aws logs tail /ecs/karmacadabra-prod/validator --follow
+aws logs tail /ecs/facilitator-production/facilitator --follow --region us-east-2
 
 # View last 1 hour
-aws logs tail /ecs/karmacadabra-prod/validator --since 1h
+aws logs tail /ecs/facilitator-production/facilitator --since 1h --region us-east-2
 
 # View last 100 lines
-aws logs tail /ecs/karmacadabra-prod/validator | tail -100
+aws logs tail /ecs/facilitator-production/facilitator --region us-east-2 | tail -100
 ```
 
 ### Test Health Endpoints
 
 ```bash
-# Custom domains (once DNS propagates)
-curl http://validator.karmacadabra.ultravioletadao.xyz/health
-curl http://karma-hello.karmacadabra.ultravioletadao.xyz/health
-curl http://abracadabra.karmacadabra.ultravioletadao.xyz/health
-curl http://skill-extractor.karmacadabra.ultravioletadao.xyz/health
-curl http://voice-extractor.karmacadabra.ultravioletadao.xyz/health
+# Custom domain (once DNS propagates)
+curl https://facilitator.ultravioletadao.xyz/health
 
 # ALB direct (works immediately)
-ALB_DNS="karmacadabra-prod-alb-1072717858.us-east-1.elb.amazonaws.com"
-curl http://$ALB_DNS/validator/health
-curl http://$ALB_DNS/karma-hello/health
+ALB_DNS=$(cd terraform/environments/production && terraform output -raw alb_dns_name)
+curl http://$ALB_DNS/health
 ```
 
 ### Common Issues
@@ -237,10 +232,10 @@ curl http://$ALB_DNS/karma-hello/health
 **Diagnosis:**
 ```bash
 # List stopped tasks
-aws ecs list-tasks --cluster karmacadabra-prod --desired-status STOPPED
+aws ecs list-tasks --cluster facilitator-production --desired-status STOPPED --region us-east-2
 
 # Get task details
-aws ecs describe-tasks --cluster karmacadabra-prod --tasks <task-arn>
+aws ecs describe-tasks --cluster facilitator-production --tasks <task-arn> --region us-east-2
 ```
 
 **Common causes:**
@@ -272,11 +267,12 @@ aws elbv2 describe-target-health \
 **Diagnosis:**
 ```bash
 # Get stopped task reason
-aws ecs describe-tasks --cluster karmacadabra-prod --tasks <task-id> \
+aws ecs describe-tasks --cluster facilitator-production --tasks <task-id> \
+  --region us-east-2 \
   --query 'tasks[0].stoppedReason'
 
 # Check container logs
-aws logs tail /ecs/karmacadabra-prod/validator --since 1h
+aws logs tail /ecs/facilitator-production/facilitator --since 1h --region us-east-2
 ```
 
 **Common causes:**
@@ -291,10 +287,9 @@ aws logs tail /ecs/karmacadabra-prod/validator --since 1h
 **Diagnosis:**
 ```bash
 # Check DNS records
-nslookup validator.karmacadabra.ultravioletadao.xyz
+nslookup facilitator.ultravioletadao.xyz
 
-# Should return ALB DNS:
-# karmacadabra-prod-alb-1072717858.us-east-1.elb.amazonaws.com
+# Should return ALB DNS (in us-east-2)
 ```
 
 **Solutions:**
@@ -307,17 +302,19 @@ nslookup validator.karmacadabra.ultravioletadao.xyz
 ```bash
 # Get task ID
 TASK_ID=$(aws ecs list-tasks \
-  --cluster karmacadabra-prod \
-  --service-name karmacadabra-prod-validator \
+  --cluster facilitator-production \
+  --service-name facilitator-production \
   --desired-status RUNNING \
+  --region us-east-2 \
   --query 'taskArns[0]' \
   --output text | cut -d'/' -f3)
 
 # Execute shell
 aws ecs execute-command \
-  --cluster karmacadabra-prod \
+  --cluster facilitator-production \
   --task $TASK_ID \
-  --container validator \
+  --container facilitator \
+  --region us-east-2 \
   --interactive \
   --command '/bin/bash'
 ```
@@ -343,20 +340,18 @@ Breakdown:
 
 ```bash
 # Scale to 0 (stop all tasks)
-for agent in validator karma-hello abracadabra skill-extractor voice-extractor; do
-  aws ecs update-service \
-    --cluster karmacadabra-prod \
-    --service karmacadabra-prod-$agent \
-    --desired-count 0
-done
+aws ecs update-service \
+  --cluster facilitator-production \
+  --service facilitator-production \
+  --desired-count 0 \
+  --region us-east-2
 
 # Scale back up
-for agent in validator karma-hello abracadabra skill-extractor voice-extractor; do
-  aws ecs update-service \
-    --cluster karmacadabra-prod \
-    --service karmacadabra-prod-$agent \
-    --desired-count 1
-done
+aws ecs update-service \
+  --cluster facilitator-production \
+  --service facilitator-production \
+  --desired-count 1 \
+  --region us-east-2
 ```
 
 **Savings:** ~$25-40/month when scaled to 0
@@ -435,41 +430,38 @@ variable "enable_container_insights" {
 
 ## Quick Reference
 
-### Agent Endpoints
+### Facilitator Endpoints
 
-**Custom Domains:**
-- http://validator.karmacadabra.ultravioletadao.xyz/health
-- http://karma-hello.karmacadabra.ultravioletadao.xyz/health
-- http://abracadabra.karmacadabra.ultravioletadao.xyz/health
-- http://skill-extractor.karmacadabra.ultravioletadao.xyz/health
-- http://voice-extractor.karmacadabra.ultravioletadao.xyz/health
+**Custom Domain:**
+- https://facilitator.ultravioletadao.xyz/health
+- https://facilitator.ultravioletadao.xyz/supported
+- https://facilitator.ultravioletadao.xyz/
 
 **ALB Direct:**
-- http://karmacadabra-prod-alb-1072717858.us-east-1.elb.amazonaws.com/validator/health
-- http://karmacadabra-prod-alb-1072717858.us-east-1.elb.amazonaws.com/karma-hello/health
-- ...
+- Get DNS: `cd terraform/environments/production && terraform output alb_dns_name`
 
 ### Useful Commands
 
 ```bash
 # View all running tasks
-aws ecs list-tasks --cluster karmacadabra-prod --desired-status RUNNING
+aws ecs list-tasks --cluster facilitator-production --desired-status RUNNING --region us-east-2
 
-# Force redeploy single service
-aws ecs update-service --cluster karmacadabra-prod --service karmacadabra-prod-validator --force-new-deployment
+# Force redeploy service
+aws ecs update-service --cluster facilitator-production --service facilitator-production --force-new-deployment --region us-east-2
 
-# Stop all services (scale to 0)
-aws ecs update-service --cluster karmacadabra-prod --service karmacadabra-prod-validator --desired-count 0
+# Stop service (scale to 0)
+aws ecs update-service --cluster facilitator-production --service facilitator-production --desired-count 0 --region us-east-2
 
 # View CloudWatch metrics
 aws cloudwatch get-metric-statistics \
   --namespace AWS/ECS \
   --metric-name CPUUtilization \
-  --dimensions Name=ServiceName,Value=karmacadabra-prod-validator Name=ClusterName,Value=karmacadabra-prod \
+  --dimensions Name=ServiceName,Value=facilitator-production Name=ClusterName,Value=facilitator-production \
   --start-time 2025-01-01T00:00:00Z \
   --end-time 2025-01-01T01:00:00Z \
   --period 300 \
-  --statistics Average
+  --statistics Average \
+  --region us-east-2
 ```
 
 ---

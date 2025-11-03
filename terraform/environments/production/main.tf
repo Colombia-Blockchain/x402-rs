@@ -1,7 +1,7 @@
 # ============================================================================
 # Facilitator Production Infrastructure - us-east-2
 # ============================================================================
-# Standalone deployment for facilitator.prod.ultravioletadao.xyz
+# Standalone deployment for facilitator.ultravioletadao.xyz
 # Cost-optimized configuration: ~$43-48/month
 
 # Data Sources

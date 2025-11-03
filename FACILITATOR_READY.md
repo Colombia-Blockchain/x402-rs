@@ -2,7 +2,7 @@
 
 **Status**: Ready to copy out of karmacadabra
 **Date**: 2025-11-01
-**Domain**: facilitator.prod.ultravioletadao.xyz → facilitator.ultravioletadao.xyz (after old stack destroyed)
+**Domain**: facilitator.ultravioletadao.xyz → facilitator.ultravioletadao.xyz (after old stack destroyed)
 
 ---
 
@@ -27,7 +27,7 @@
 - ✅ Production environment: `terraform/environments/production/`
 - ✅ Backend config: S3 + DynamoDB state management
 - ✅ Variables: Cost-optimized defaults (NAT instance, no VPC endpoints)
-- ✅ **NEW DOMAIN**: facilitator.prod.ultravioletadao.xyz configured
+- ✅ **NEW DOMAIN**: facilitator.ultravioletadao.xyz configured
 
 **Deployment Scripts**:
 - ✅ `scripts/build-and-push.sh` - Docker build + ECR push
@@ -69,7 +69,7 @@ facilitator/                        # 📁 READY TO COPY OUT
 │   └── check_config.py          # Config validation
 ├── terraform/                     # AWS infrastructure
 │   ├── environments/
-│   │   └── production/          # facilitator.prod.ultravioletadao.xyz
+│   │   └── production/          # facilitator.ultravioletadao.xyz
 │   │       ├── backend.tf       # S3 backend
 │   │       ├── main.tf          # VPC, ALB, ECS, etc (TEMPLATE)
 │   │       ├── variables.tf     # Input variables
@@ -197,7 +197,7 @@ git push -u origin main
 **Prerequisites** (run once):
 ```bash
 # S3 backend for Terraform state
-aws s3 mb s3://facilitator-terraform-state --region us-east-1
+aws s3 mb s3://facilitator-terraform-state --region us-east-2
 aws s3api put-bucket-versioning \
   --bucket facilitator-terraform-state \
   --versioning-configuration Status=Enabled
@@ -208,14 +208,14 @@ aws dynamodb create-table \
   --attribute-definitions AttributeName=LockID,AttributeType=S \
   --key-schema AttributeName=LockID,KeyType=HASH \
   --billing-mode PAY_PER_REQUEST \
-  --region us-east-1
+  --region us-east-2
 
 # ECR repository
 aws ecr create-repository \
   --repository-name facilitator \
   --image-scanning-configuration scanOnPush=true \
   --encryption-configuration encryptionType=AES256 \
-  --region us-east-1
+  --region us-east-2
 ```
 
 **Migrate Secrets** (⚠️ SECURE WORKSTATION ONLY):
@@ -234,13 +234,13 @@ aws secretsmanager create-secret \
   --name facilitator-evm-private-key \
   --description "Facilitator EVM private key for mainnet" \
   --secret-string file:///tmp/evm-key.json \
-  --region us-east-1
+  --region us-east-2
 
 aws secretsmanager create-secret \
   --name facilitator-solana-keypair \
   --description "Facilitator Solana keypair for mainnet" \
   --secret-string file:///tmp/solana-key.json \
-  --region us-east-1
+  --region us-east-2
 
 # SECURE DELETE (critical!)
 shred -vfz -n 10 /tmp/evm-key.json /tmp/solana-key.json
@@ -284,7 +284,7 @@ chmod +x scripts/build-and-push.sh
 # Verify image in ECR
 aws ecr describe-images \
   --repository-name facilitator \
-  --region us-east-1
+  --region us-east-2
 ```
 
 ### 6. Deploy to AWS (Production)
@@ -327,17 +327,17 @@ curl https://$ALB_DNS/health
 aws ecs describe-services \
   --cluster facilitator-production \
   --services facilitator-production \
-  --region us-east-1 \
+  --region us-east-2 \
   --query 'services[0].{status:status,running:runningCount,desired:desiredCount}'
 
 # Check DNS (after Route53 propagates)
-curl https://facilitator.prod.ultravioletadao.xyz/health
-curl https://facilitator.prod.ultravioletadao.xyz/ | grep "Ultravioleta"
+curl https://facilitator.ultravioletadao.xyz/health
+curl https://facilitator.ultravioletadao.xyz/ | grep "Ultravioleta"
 
 # Run production test
 cd ../../tests/integration
 python test_glue_payment.py \
-  --facilitator https://facilitator.prod.ultravioletadao.xyz \
+  --facilitator https://facilitator.ultravioletadao.xyz \
   --network fuji
 ```
 
@@ -362,7 +362,7 @@ python test_glue_payment.py \
 
 ## Migration to Final Domain
 
-**Current**: `facilitator.prod.ultravioletadao.xyz` (parallel deployment)
+**Current**: `facilitator.ultravioletadao.xyz` (parallel deployment)
 **Target**: `facilitator.ultravioletadao.xyz` (after destroying old karmacadabra stack)
 
 ### When Ready to Migrate
@@ -471,7 +471,7 @@ See `docs/UPSTREAM_MERGE_STRATEGY.md` for safe merge procedures.
 - Terraform production environment configured (template - needs review)
 - Documentation complete
 - Cost-optimized (~$43-48/month)
-- New domain configured (facilitator.prod.ultravioletadao.xyz)
+- New domain configured (facilitator.ultravioletadao.xyz)
 
 **Estimated Time to Production**:
 - AWS setup: 30 minutes

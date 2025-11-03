@@ -22,7 +22,7 @@ import sys
 import os
 
 
-REGION = 'us-east-1'
+REGION = 'us-east-2'
 TESTNET_ADDRESS = "0x34033041a5944B8F10f8E4D8496Bfb84f1A293A8"
 
 
@@ -56,7 +56,7 @@ def create_testnet_secret(private_key: str):
 
     try:
         client.create_secret(
-            Name='karmacadabra-facilitator-testnet',
+            Name='facilitator-evm-private-key-testnet',
             Description='Facilitator hot wallet for testnet networks (Avalanche Fuji, Base Sepolia)',
             SecretString=json.dumps(secret_value)
         )

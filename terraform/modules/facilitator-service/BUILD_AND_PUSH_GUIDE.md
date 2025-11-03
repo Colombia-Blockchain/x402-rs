@@ -45,9 +45,9 @@ The script performs three main steps:
 
 ### 1. ECR Login (Step 1/3)
 ```bash
-aws ecr get-login-password --region us-east-1 | \
+aws ecr get-login-password --region us-east-2 | \
     docker login --username AWS --password-stdin \
-    518898403364.dkr.ecr.us-east-1.amazonaws.com
+    518898403364.dkr.ecr.us-east-2.amazonaws.com
 ```
 
 ### 2. Build Images (Step 2/3)
@@ -64,21 +64,21 @@ docker build \
 For each agent:
 ```bash
 docker tag karmacadabra/<agent-name>:latest \
-    518898403364.dkr.ecr.us-east-1.amazonaws.com/karmacadabra/<agent-name>:latest
+    518898403364.dkr.ecr.us-east-2.amazonaws.com/karmacadabra/<agent-name>:latest
 
 docker push \
-    518898403364.dkr.ecr.us-east-1.amazonaws.com/karmacadabra/<agent-name>:latest
+    518898403364.dkr.ecr.us-east-2.amazonaws.com/karmacadabra/<agent-name>:latest
 ```
 
 ## ECR Repository URLs
 
 After pushing, images will be available at:
 
-- **Validator**: `518898403364.dkr.ecr.us-east-1.amazonaws.com/karmacadabra/validator:latest`
-- **Karma-Hello**: `518898403364.dkr.ecr.us-east-1.amazonaws.com/karmacadabra/karma-hello:latest`
-- **Abracadabra**: `518898403364.dkr.ecr.us-east-1.amazonaws.com/karmacadabra/abracadabra:latest`
-- **Skill-Extractor**: `518898403364.dkr.ecr.us-east-1.amazonaws.com/karmacadabra/skill-extractor:latest`
-- **Voice-Extractor**: `518898403364.dkr.ecr.us-east-1.amazonaws.com/karmacadabra/voice-extractor:latest`
+- **Validator**: `518898403364.dkr.ecr.us-east-2.amazonaws.com/karmacadabra/validator:latest`
+- **Karma-Hello**: `518898403364.dkr.ecr.us-east-2.amazonaws.com/karmacadabra/karma-hello:latest`
+- **Abracadabra**: `518898403364.dkr.ecr.us-east-2.amazonaws.com/karmacadabra/abracadabra:latest`
+- **Skill-Extractor**: `518898403364.dkr.ecr.us-east-2.amazonaws.com/karmacadabra/skill-extractor:latest`
+- **Voice-Extractor**: `518898403364.dkr.ecr.us-east-2.amazonaws.com/karmacadabra/voice-extractor:latest`
 
 ## Force New Deployment
 
@@ -87,16 +87,18 @@ After pushing new images, force ECS to redeploy with updated images:
 ```bash
 # Deploy single agent
 aws ecs update-service \
-    --cluster karmacadabra-prod \
-    --service karmacadabra-prod-validator \
-    --force-new-deployment
+    --cluster facilitator-production \
+    --service facilitator-production \
+    --force-new-deployment \
+    --region us-east-2
 
 # Deploy all agents
 for agent in validator karma-hello abracadabra skill-extractor voice-extractor; do
     aws ecs update-service \
-        --cluster karmacadabra-prod \
-        --service karmacadabra-prod-$agent \
-        --force-new-deployment
+        --cluster facilitator-production \
+        --service facilitator-production-$agent \
+        --force-new-deployment \
+        --region us-east-2
 done
 ```
 
@@ -105,24 +107,26 @@ done
 ### Check Service Status
 ```bash
 aws ecs describe-services \
-    --cluster karmacadabra-prod \
-    --services karmacadabra-prod-validator
+    --cluster facilitator-production \
+    --services facilitator-production \
+    --region us-east-2
 ```
 
 ### View Running Tasks
 ```bash
 aws ecs list-tasks \
-    --cluster karmacadabra-prod \
-    --service-name karmacadabra-prod-validator
+    --cluster facilitator-production \
+    --service-name facilitator-production \
+    --region us-east-2
 ```
 
 ### View Logs
 ```bash
 # Stream logs for specific agent
-aws logs tail /ecs/karmacadabra-prod/validator --follow
+aws logs tail /ecs/facilitator-production/facilitator --follow --region us-east-2
 
 # View recent logs
-aws logs tail /ecs/karmacadabra-prod/validator --since 1h
+aws logs tail /ecs/facilitator-production/facilitator --since 1h --region us-east-2
 ```
 
 ## Troubleshooting
@@ -179,8 +183,8 @@ terraform apply
 # Linux/Mac
 AGENT_NAME="validator"
 docker build -f Dockerfile.agent -t karmacadabra/$AGENT_NAME:latest --build-arg AGENT_NAME=$AGENT_NAME .
-docker tag karmacadabra/$AGENT_NAME:latest 518898403364.dkr.ecr.us-east-1.amazonaws.com/karmacadabra/$AGENT_NAME:latest
-docker push 518898403364.dkr.ecr.us-east-1.amazonaws.com/karmacadabra/$AGENT_NAME:latest
+docker tag karmacadabra/$AGENT_NAME:latest 518898403364.dkr.ecr.us-east-2.amazonaws.com/karmacadabra/$AGENT_NAME:latest
+docker push 518898403364.dkr.ecr.us-east-2.amazonaws.com/karmacadabra/$AGENT_NAME:latest
 ```
 
 ### Build with Version Tag
@@ -191,8 +195,8 @@ AGENT_NAME="validator"
 
 docker build -f Dockerfile.agent -t karmacadabra/$AGENT_NAME:$VERSION .
 docker tag karmacadabra/$AGENT_NAME:$VERSION \
-    518898403364.dkr.ecr.us-east-1.amazonaws.com/karmacadabra/$AGENT_NAME:$VERSION
-docker push 518898403364.dkr.ecr.us-east-1.amazonaws.com/karmacadabra/$AGENT_NAME:$VERSION
+    518898403364.dkr.ecr.us-east-2.amazonaws.com/karmacadabra/$AGENT_NAME:$VERSION
+docker push 518898403364.dkr.ecr.us-east-2.amazonaws.com/karmacadabra/$AGENT_NAME:$VERSION
 ```
 
 ### Clean Up Local Images
@@ -202,7 +206,7 @@ docker push 518898403364.dkr.ecr.us-east-1.amazonaws.com/karmacadabra/$AGENT_NAM
 docker rmi $(docker images 'karmacadabra/*' -q)
 
 # Remove all ECR-tagged images
-docker rmi $(docker images '518898403364.dkr.ecr.us-east-1.amazonaws.com/karmacadabra/*' -q)
+docker rmi $(docker images '518898403364.dkr.ecr.us-east-2.amazonaws.com/karmacadabra/*' -q)
 ```
 
 ## CI/CD Integration
@@ -227,7 +231,7 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
+          aws-region: us-east-2
 
       - name: Build and push
         run: bash terraform/ecs-fargate/build-and-push.sh

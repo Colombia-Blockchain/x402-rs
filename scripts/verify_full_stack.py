@@ -18,7 +18,7 @@ EXPECTED_BASE_USDC = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
 EXPECTED_BASE_USDC_NAME = "USD Coin"
 EXPECTED_BASE_USDC_VERSION = "2"
 
-client = boto3.client('secretsmanager', region_name='us-east-1')
+client = boto3.client('secretsmanager', region_name='us-east-2')
 
 # 1. Check Facilitator Wallet
 print("\n" + "=" * 80)
@@ -26,7 +26,7 @@ print("[1] FACILITATOR WALLET (MAINNET)")
 print("=" * 80)
 
 try:
-    response = client.get_secret_value(SecretId='karmacadabra-facilitator-mainnet')
+    response = client.get_secret_value(SecretId='facilitator-evm-private-key')
     config = json.loads(response['SecretString'])
     facilitator_address = config['address']
 
@@ -48,7 +48,7 @@ print("[2] TEST WALLETS")
 print("=" * 80)
 
 try:
-    response = client.get_secret_value(SecretId='karmacadabra-test-buyer')
+    response = client.get_secret_value(SecretId='facilitator-test-buyer')
     buyer_config = json.loads(response['SecretString'])
     buyer_address = buyer_config['address']
     print(f"Buyer:  {buyer_address}")
@@ -57,7 +57,7 @@ except Exception as e:
     buyer_address = None
 
 try:
-    response = client.get_secret_value(SecretId='karmacadabra-test-seller')
+    response = client.get_secret_value(SecretId='facilitator-test-seller')
     seller_config = json.loads(response['SecretString'])
     seller_address = seller_config['address']
     print(f"Seller: {seller_address}")

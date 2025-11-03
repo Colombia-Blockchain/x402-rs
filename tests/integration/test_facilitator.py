@@ -23,4 +23,4 @@ print("\nWait 5 seconds for logs to propagate...")
 time.sleep(5)
 
 print("\nTo view logs, run:")
-print("  aws logs tail /ecs/karmacadabra-prod-facilitator --since 1m --follow --region us-east-1")
+print("  aws logs tail /ecs/facilitator-production --since 1m --follow --region us-east-2")
