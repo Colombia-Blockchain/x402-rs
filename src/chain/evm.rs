@@ -818,6 +818,10 @@ impl Facilitator for EvmProvider {
         }];
         Ok(SupportedPaymentKindsResponse { kinds })
     }
+
+    async fn blacklist_info(&self) -> Result<crate::types::BlacklistInfoResponse, Self::Error> {
+        Err(FacilitatorLocalError::UnsupportedNetwork(None))
+    }
 }
 
 /// A prepared call to `transferWithAuthorization` (ERC-3009) including all derived fields.

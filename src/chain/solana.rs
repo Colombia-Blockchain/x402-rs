@@ -538,6 +538,10 @@ impl Facilitator for SolanaProvider {
         }];
         Ok(SupportedPaymentKindsResponse { kinds })
     }
+
+    async fn blacklist_info(&self) -> Result<crate::types::BlacklistInfoResponse, Self::Error> {
+        Err(FacilitatorLocalError::UnsupportedNetwork(None))
+    }
 }
 
 pub struct InstructionInt {

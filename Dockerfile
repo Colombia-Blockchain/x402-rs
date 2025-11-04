@@ -24,7 +24,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
 
 WORKDIR /app
 
+# Copy the compiled binary
 COPY --from=builder /app/target/release/x402-rs /usr/local/bin/x402-rs
+
+# Copy configuration files (blacklist.json must be present at runtime)
+COPY --from=builder /app/config /app/config
 
 EXPOSE $PORT
 ENV RUST_LOG=info

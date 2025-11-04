@@ -73,15 +73,43 @@ async fn main() {
         std::process::exit(1);
     }
 
-    // Load blacklist - use empty blacklist if file not found
+    // Load blacklist - fail fast if BLACKLIST_REQUIRED=true
+    let blacklist_required = env::var("BLACKLIST_REQUIRED")
+        .unwrap_or_else(|_| "false".to_string())
+        .parse::<bool>()
+        .unwrap_or(false);
+
     let blacklist = match Blacklist::load_from_file("config/blacklist.json") {
         Ok(blacklist) => {
-            tracing::info!("Loaded blacklist with {} blocked addresses", blacklist.total_blocked());
+            tracing::info!(
+                "Successfully loaded blacklist: {} EVM addresses, {} Solana addresses, {} total blocked",
+                blacklist.evm_count(),
+                blacklist.solana_count(),
+                blacklist.total_blocked()
+            );
+            if blacklist.total_blocked() == 0 {
+                tracing::warn!("Blacklist file loaded but contains ZERO entries - no protection active!");
+            }
             Arc::new(blacklist)
         }
         Err(e) => {
-            tracing::warn!("Failed to load config/blacklist.json: {}. Using empty blacklist.", e);
-            Arc::new(Blacklist::empty())
+            if blacklist_required {
+                tracing::error!(
+                    "BLACKLIST_REQUIRED=true but failed to load config/blacklist.json: {}",
+                    e
+                );
+                tracing::error!("Refusing to start without blacklist protection. Exiting.");
+                std::process::exit(1);
+            } else {
+                tracing::warn!(
+                    "Failed to load config/blacklist.json: {}. Using empty blacklist.",
+                    e
+                );
+                tracing::warn!(
+                    "Set BLACKLIST_REQUIRED=true to fail-fast if blacklist cannot be loaded."
+                );
+                Arc::new(Blacklist::empty())
+            }
         }
     };
 
@@ -105,6 +133,7 @@ async fn main() {
         .route("/settle", post(handlers::post_settle::<FacilitatorLocal>))
         .route("/supported", get(handlers::get_supported::<FacilitatorLocal>))
         .route("/health", get(handlers::get_health::<FacilitatorLocal>))
+        .route("/blacklist", get(handlers::get_blacklist::<FacilitatorLocal>))
         .with_state(facilitator)
         .layer(
             TraceLayer::new_for_http()

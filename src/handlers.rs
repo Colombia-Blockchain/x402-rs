@@ -225,6 +225,41 @@ where
     get_supported(State(facilitator)).await
 }
 
+/// `GET /blacklist`: Returns the current blacklist configuration being enforced.
+///
+/// This endpoint provides runtime visibility into which addresses are blocked from
+/// using the facilitator. Critical for security auditing and verifying blacklist
+/// enforcement is working correctly.
+///
+/// Response format:
+/// ```json
+/// {
+///   "total_blocked": 2,
+///   "evm_count": 1,
+///   "solana_count": 1,
+///   "entries": [
+///     {
+///       "account_type": "solana",
+///       "wallet": "41fx2QjU8qCEPPDLWnypgxaHaDJ3dFVi8BhfUmTEQ3az",
+///       "reason": "spam"
+///     }
+///   ],
+///   "source": "config/blacklist.json",
+///   "loaded_at_startup": true
+/// }
+/// ```
+#[instrument(skip_all)]
+pub async fn get_blacklist<A>(State(facilitator): State<A>) -> impl IntoResponse
+where
+    A: Facilitator,
+    A::Error: IntoResponse,
+{
+    match facilitator.blacklist_info().await {
+        Ok(info) => (StatusCode::OK, Json(info)).into_response(),
+        Err(error) => error.into_response(),
+    }
+}
+
 /// `POST /verify`: Facilitator-side verification of a proposed x402 payment.
 ///
 /// This endpoint checks whether a given payment payload satisfies the declared

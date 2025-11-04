@@ -105,6 +105,18 @@ impl Blacklist {
     pub fn total_blocked(&self) -> usize {
         self.evm_addresses.len() + self.solana_addresses.len()
     }
+
+    pub fn evm_count(&self) -> usize {
+        self.evm_addresses.len()
+    }
+
+    pub fn solana_count(&self) -> usize {
+        self.solana_addresses.len()
+    }
+
+    pub fn entries(&self) -> &[BlacklistEntry] {
+        &self.entries
+    }
 }
 
 #[derive(Debug, thiserror::Error)]

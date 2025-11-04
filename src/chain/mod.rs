@@ -5,8 +5,8 @@ use crate::chain::solana::SolanaProvider;
 use crate::facilitator::Facilitator;
 use crate::network::Network;
 use crate::types::{
-    MixedAddress, Scheme, SettleRequest, SettleResponse, SupportedPaymentKindsResponse,
-    VerifyRequest, VerifyResponse,
+    BlacklistInfoResponse, MixedAddress, Scheme, SettleRequest, SettleResponse,
+    SupportedPaymentKindsResponse, VerifyRequest, VerifyResponse,
 };
 
 pub mod evm;
@@ -60,6 +60,10 @@ impl Facilitator for NetworkProvider {
             NetworkProvider::Evm(provider) => provider.supported().await,
             NetworkProvider::Solana(provider) => provider.supported().await,
         }
+    }
+
+    async fn blacklist_info(&self) -> Result<BlacklistInfoResponse, Self::Error> {
+        Err(FacilitatorLocalError::UnsupportedNetwork(None))
     }
 }
 

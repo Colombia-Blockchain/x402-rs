@@ -205,6 +205,27 @@ impl Facilitator for FacilitatorLocal {
         let kinds = self.kinds();
         Ok(SupportedPaymentKindsResponse { kinds })
     }
+
+    async fn blacklist_info(&self) -> Result<crate::types::BlacklistInfoResponse, Self::Error> {
+        // Convert internal BlacklistEntry to API BlacklistEntry
+        let entries = self.blacklist.entries()
+            .iter()
+            .map(|e| crate::types::BlacklistEntry {
+                account_type: e.account_type.clone(),
+                wallet: e.wallet.clone(),
+                reason: e.reason.clone(),
+            })
+            .collect();
+
+        Ok(crate::types::BlacklistInfoResponse {
+            total_blocked: self.blacklist.total_blocked(),
+            evm_count: self.blacklist.evm_count(),
+            solana_count: self.blacklist.solana_count(),
+            entries,
+            source: "config/blacklist.json".to_string(),
+            loaded_at_startup: self.blacklist.total_blocked() > 0,
+        })
+    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
