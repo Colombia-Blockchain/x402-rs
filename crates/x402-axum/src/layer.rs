@@ -88,7 +88,7 @@ use x402_rs::types::{
 };
 
 #[cfg(feature = "telemetry")]
-use tracing::{Instrument, Level, instrument};
+use tracing::{instrument, Instrument, Level};
 
 use crate::facilitator_client::{FacilitatorClient, FacilitatorClientError};
 use crate::price::PriceTag;

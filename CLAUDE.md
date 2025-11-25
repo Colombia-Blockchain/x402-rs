@@ -515,3 +515,8 @@ This complete checklist covers:
   - Upstream uses edition 2024 (requires Rust 1.86+)
   - Can upgrade to edition 2024 when ready to require Rust 1.86+
   - See v0.9.1 merge for details (commit 75b37e6)
+- **Version Bumping**: Before releasing, always check the deployed version first:
+  ```bash
+  curl -s https://facilitator.ultravioletadao.xyz/version
+  ```
+  Then bump `Cargo.toml` version from the deployed version, NOT from the local version.

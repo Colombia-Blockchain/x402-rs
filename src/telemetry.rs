@@ -1,14 +1,14 @@
 use axum::http::{Request, Response};
 use opentelemetry::trace::{Status, TracerProvider};
-use opentelemetry::{KeyValue, Value, global};
+use opentelemetry::{global, KeyValue, Value};
 use opentelemetry_sdk::{
-    Resource,
     metrics::{MeterProviderBuilder, PeriodicReader, SdkMeterProvider},
     trace::{RandomIdGenerator, Sampler, SdkTracerProvider},
+    Resource,
 };
 use opentelemetry_semantic_conventions::{
-    SCHEMA_URL,
     attribute::{DEPLOYMENT_ENVIRONMENT_NAME, SERVICE_VERSION},
+    SCHEMA_URL,
 };
 use serde::{Deserialize, Serialize};
 use std::env;
@@ -16,7 +16,7 @@ use std::time::Duration;
 use tower_http::trace::{MakeSpan, OnResponse, TraceLayer};
 use tracing::Span;
 use tracing_opentelemetry::{MetricsLayer, OpenTelemetryLayer, OpenTelemetrySpanExt};
-use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitExt};
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
 /// Supported telemetry transport protocols for exporting OTLP data.
 ///

@@ -58,6 +58,7 @@ impl TryFrom<Network> for SolanaChain {
             Network::ArbitrumSepolia => Err(FacilitatorLocalError::UnsupportedNetwork(None)),
             Network::Unichain => Err(FacilitatorLocalError::UnsupportedNetwork(None)),
             Network::UnichainSepolia => Err(FacilitatorLocalError::UnsupportedNetwork(None)),
+            Network::Monad => Err(FacilitatorLocalError::UnsupportedNetwork(None)),
         }
     }
 }

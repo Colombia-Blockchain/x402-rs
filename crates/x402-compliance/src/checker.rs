@@ -1,7 +1,7 @@
+use crate::audit_logger::{AuditLogger, ComplianceEvent, Decision, EventType};
+use crate::config::Config;
 use crate::error::Result;
 use crate::lists::SanctionsList;
-use crate::audit_logger::{AuditLogger, ComplianceEvent, EventType, Decision};
-use crate::config::Config;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -180,9 +180,9 @@ impl ComplianceCheckerBuilder {
         };
 
         // Create audit logger
-        let audit_logger = self.audit_logger.unwrap_or_else(|| {
-            Arc::new(AuditLogger::new(config.audit_logging.clone()))
-        });
+        let audit_logger = self
+            .audit_logger
+            .unwrap_or_else(|| Arc::new(AuditLogger::new(config.audit_logging.clone())));
 
         Ok(Box::new(MultiListChecker {
             lists,
@@ -219,10 +219,7 @@ impl ComplianceChecker for MultiListChecker {
         let mut list_versions = HashMap::new();
 
         // Screen both payer and payee
-        for (address, address_type) in [
-            (payer, AddressType::Payer),
-            (payee, AddressType::Payee),
-        ] {
+        for (address, address_type) in [(payer, AddressType::Payer), (payee, AddressType::Payee)] {
             // Check blacklist first
             if let Some(blacklist) = &self.blacklist {
                 if blacklist.is_blacklisted(address) {
@@ -265,7 +262,10 @@ impl ComplianceChecker for MultiListChecker {
             for list in &self.lists {
                 if list.is_sanctioned(address) {
                     let metadata = list.metadata();
-                    list_versions.insert(metadata.name.clone(), metadata.checksum.clone().unwrap_or_default());
+                    list_versions.insert(
+                        metadata.name.clone(),
+                        metadata.checksum.clone().unwrap_or_default(),
+                    );
 
                     let matched = MatchedEntity {
                         address: address.to_string(),
@@ -351,7 +351,9 @@ impl ComplianceChecker for MultiListChecker {
     }
 
     fn is_list_enabled(&self, list_name: &str) -> bool {
-        self.lists.iter().any(|list| list.metadata().name == list_name)
+        self.lists
+            .iter()
+            .any(|list| list.metadata().name == list_name)
     }
 
     fn list_metadata(&self) -> HashMap<String, ListMetadata> {

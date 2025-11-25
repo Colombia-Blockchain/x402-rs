@@ -27,8 +27,8 @@ impl SolanaExtractor {
             })?;
 
         // Deserialize transaction
-        let transaction: solana_sdk::transaction::Transaction =
-            bincode::deserialize(&tx_bytes).map_err(|e| {
+        let transaction: solana_sdk::transaction::Transaction = bincode::deserialize(&tx_bytes)
+            .map_err(|e| {
                 ComplianceError::AddressExtraction(format!(
                     "Failed to deserialize Solana transaction: {}",
                     e
@@ -68,8 +68,8 @@ impl SolanaExtractor {
                 ComplianceError::AddressExtraction(format!("Failed to decode base64: {}", e))
             })?;
 
-        let transaction: solana_sdk::transaction::Transaction =
-            bincode::deserialize(&tx_bytes).map_err(|e| {
+        let transaction: solana_sdk::transaction::Transaction = bincode::deserialize(&tx_bytes)
+            .map_err(|e| {
                 ComplianceError::AddressExtraction(format!(
                     "Failed to deserialize Solana transaction: {}",
                     e
@@ -91,11 +91,7 @@ impl SolanaExtractor {
 mod tests {
     use super::*;
     use solana_sdk::{
-        message::Message,
-        pubkey::Pubkey,
-        signature::Keypair,
-        signer::Signer,
-        system_instruction,
+        message::Message, pubkey::Pubkey, signature::Keypair, signer::Signer, system_instruction,
         transaction::Transaction,
     };
 

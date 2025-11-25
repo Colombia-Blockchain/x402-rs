@@ -87,6 +87,9 @@ pub enum Network {
     /// Unichain Sepolia testnet (chain ID 1301).
     #[serde(rename = "unichain-sepolia")]
     UnichainSepolia,
+    /// Monad mainnet (chain ID 143).
+    #[serde(rename = "monad")]
+    Monad,
 }
 
 impl Display for Network {
@@ -115,6 +118,7 @@ impl Display for Network {
             Network::ArbitrumSepolia => write!(f, "arbitrum-sepolia"),
             Network::Unichain => write!(f, "unichain"),
             Network::UnichainSepolia => write!(f, "unichain-sepolia"),
+            Network::Monad => write!(f, "monad"),
         }
     }
 }
@@ -151,6 +155,7 @@ impl From<Network> for NetworkFamily {
             Network::ArbitrumSepolia => NetworkFamily::Evm,
             Network::Unichain => NetworkFamily::Evm,
             Network::UnichainSepolia => NetworkFamily::Evm,
+            Network::Monad => NetworkFamily::Evm,
         }
     }
 }
@@ -182,6 +187,7 @@ impl Network {
             Network::ArbitrumSepolia,
             Network::Unichain,
             Network::UnichainSepolia,
+            Network::Monad,
         ]
     }
 
@@ -550,6 +556,21 @@ static USDC_UNICHAIN_SEPOLIA: Lazy<USDCDeployment> = Lazy::new(|| {
     })
 });
 
+/// Lazily initialized known USDC deployment on Monad mainnet as [`USDCDeployment`].
+static USDC_MONAD: Lazy<USDCDeployment> = Lazy::new(|| {
+    USDCDeployment(TokenDeployment {
+        asset: TokenAsset {
+            address: address!("0x754704bc059f8c67012fed69bc8a327a5aafb603").into(),
+            network: Network::Monad,
+        },
+        decimals: 6,
+        eip712: Some(TokenDeploymentEip712 {
+            name: "USDC".into(),
+            version: "2".into(),
+        }),
+    })
+});
+
 /// A known USDC deployment as a wrapper around [`TokenDeployment`].
 #[derive(Clone, Debug)]
 pub struct USDCDeployment(pub TokenDeployment);
@@ -609,6 +630,7 @@ impl USDCDeployment {
             Network::ArbitrumSepolia => &USDC_ARBITRUM_SEPOLIA,
             Network::Unichain => &USDC_UNICHAIN,
             Network::UnichainSepolia => &USDC_UNICHAIN_SEPOLIA,
+            Network::Monad => &USDC_MONAD,
         }
     }
 }

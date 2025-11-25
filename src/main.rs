@@ -20,8 +20,8 @@
 //! - `HOST`, `PORT` control binding address
 //! - `OTEL_*` variables enable tracing to systems like Honeycomb
 
-use axum::Router;
 use axum::http::Method;
+use axum::Router;
 use dotenvy::dotenv;
 use std::net::SocketAddr;
 use std::sync::Arc;

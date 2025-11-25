@@ -36,6 +36,7 @@ pub const ENV_RPC_ARBITRUM: &str = "RPC_URL_ARBITRUM";
 pub const ENV_RPC_ARBITRUM_SEPOLIA: &str = "RPC_URL_ARBITRUM_SEPOLIA";
 pub const ENV_RPC_UNICHAIN: &str = "RPC_URL_UNICHAIN";
 pub const ENV_RPC_UNICHAIN_SEPOLIA: &str = "RPC_URL_UNICHAIN_SEPOLIA";
+pub const ENV_RPC_MONAD: &str = "RPC_URL_MONAD";
 
 pub fn rpc_env_name_from_network(network: Network) -> &'static str {
     match network {
@@ -62,6 +63,7 @@ pub fn rpc_env_name_from_network(network: Network) -> &'static str {
         Network::ArbitrumSepolia => ENV_RPC_ARBITRUM_SEPOLIA,
         Network::Unichain => ENV_RPC_UNICHAIN,
         Network::UnichainSepolia => ENV_RPC_UNICHAIN_SEPOLIA,
+        Network::Monad => ENV_RPC_MONAD,
     }
 }
 
@@ -91,18 +93,31 @@ impl SignerType {
     /// - `EVM_PRIVATE_KEY_MAINNET` — comma-separated list of private keys for mainnet networks
     /// - `EVM_PRIVATE_KEY_TESTNET` — comma-separated list of private keys for testnet networks
     /// - `EVM_PRIVATE_KEY` — fallback for all networks if network-specific keys are not set
-    pub fn make_evm_wallet(&self, network: Network) -> Result<EthereumWallet, Box<dyn std::error::Error>> {
+    pub fn make_evm_wallet(
+        &self,
+        network: Network,
+    ) -> Result<EthereumWallet, Box<dyn std::error::Error>> {
         match self {
             SignerType::PrivateKey => {
                 // Try network-specific key first, then fall back to generic EVM_PRIVATE_KEY
                 let raw_keys = if network.is_testnet() {
                     env::var(ENV_EVM_PRIVATE_KEY_TESTNET)
                         .or_else(|_| env::var(ENV_EVM_PRIVATE_KEY))
-                        .map_err(|_| format!("env {} or {} not set", ENV_EVM_PRIVATE_KEY_TESTNET, ENV_EVM_PRIVATE_KEY))?
+                        .map_err(|_| {
+                            format!(
+                                "env {} or {} not set",
+                                ENV_EVM_PRIVATE_KEY_TESTNET, ENV_EVM_PRIVATE_KEY
+                            )
+                        })?
                 } else {
                     env::var(ENV_EVM_PRIVATE_KEY_MAINNET)
                         .or_else(|_| env::var(ENV_EVM_PRIVATE_KEY))
-                        .map_err(|_| format!("env {} or {} not set", ENV_EVM_PRIVATE_KEY_MAINNET, ENV_EVM_PRIVATE_KEY))?
+                        .map_err(|_| {
+                            format!(
+                                "env {} or {} not set",
+                                ENV_EVM_PRIVATE_KEY_MAINNET, ENV_EVM_PRIVATE_KEY
+                            )
+                        })?
                 };
                 let signers = raw_keys
                     .split(',')
@@ -193,7 +208,7 @@ mod tests {
 
         let signer_type = SignerType::from_env().expect("SIGNER_TYPE");
         let wallet = signer_type
-            .make_evm_wallet(Network::Base)  // Use any mainnet for testing
+            .make_evm_wallet(Network::Base) // Use any mainnet for testing
             .expect("wallet constructed from env");
 
         let expected_primary = PrivateKeySigner::from_str(KEY_1)

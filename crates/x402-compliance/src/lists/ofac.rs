@@ -64,7 +64,10 @@ pub struct OfacList {
 impl OfacList {
     /// Load OFAC sanctions list from configuration
     pub async fn load(config: &ListConfig) -> Result<Self> {
-        tracing::info!("Loading OFAC sanctions list from: {}", config.path.display());
+        tracing::info!(
+            "Loading OFAC sanctions list from: {}",
+            config.path.display()
+        );
 
         // Read the JSON file
         let content = fs::read_to_string(&config.path).map_err(|e| {

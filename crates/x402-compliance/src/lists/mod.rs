@@ -1,5 +1,5 @@
-pub mod ofac;
 pub mod blacklist;
+pub mod ofac;
 
 use crate::checker::ListMetadata;
 

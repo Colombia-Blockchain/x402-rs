@@ -1,5 +1,5 @@
-use tokio::signal::unix::SignalKind;
 use tokio::signal::unix::signal;
+use tokio::signal::unix::SignalKind;
 use tokio_util::sync::CancellationToken;
 use tokio_util::task::TaskTracker;
 

@@ -28,8 +28,9 @@ impl Blacklist {
     }
 
     pub fn from_string(content: &str) -> Result<Self> {
-        let entries: Vec<BlacklistEntry> = serde_json::from_str(content)
-            .map_err(|e| ComplianceError::ListLoadError(format!("Failed to parse blacklist JSON: {}", e)))?;
+        let entries: Vec<BlacklistEntry> = serde_json::from_str(content).map_err(|e| {
+            ComplianceError::ListLoadError(format!("Failed to parse blacklist JSON: {}", e))
+        })?;
 
         let mut addresses = HashSet::new();
 

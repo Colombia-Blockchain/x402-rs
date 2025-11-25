@@ -14,7 +14,7 @@ use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::Response;
 use axum::routing::{get, post};
-use axum::{Json, Router, response::IntoResponse};
+use axum::{response::IntoResponse, Json, Router};
 use serde_json::json;
 use tracing::{debug, error, info, instrument, warn};
 
@@ -87,6 +87,7 @@ where
         .route("/ethereum.png", get(get_ethereum_logo))
         .route("/arbitrum.png", get(get_arbitrum_logo))
         .route("/unichain.png", get(get_unichain_logo))
+        .route("/monad.png", get(get_monad_logo))
 }
 
 /// `GET /`: Returns the Ultravioleta DAO branded landing page.
@@ -244,6 +245,15 @@ pub async fn get_unichain_logo() -> impl IntoResponse {
     )
 }
 
+pub async fn get_monad_logo() -> impl IntoResponse {
+    let bytes = include_bytes!("../static/monad.png");
+    (
+        StatusCode::OK,
+        [("content-type", "image/png")],
+        bytes.as_slice(),
+    )
+}
+
 /// `GET /supported`: Lists the x402 payment schemes and networks supported by this facilitator.
 ///
 /// Facilitators may expose this to help clients dynamically configure their payment requests
@@ -351,10 +361,7 @@ where
 ///
 /// This endpoint is typically called after a successful `/verify` step.
 #[instrument(skip_all)]
-pub async fn post_settle<A>(
-    State(facilitator): State<A>,
-    raw_body: Bytes,
-) -> impl IntoResponse
+pub async fn post_settle<A>(State(facilitator): State<A>, raw_body: Bytes) -> impl IntoResponse
 where
     A: Facilitator,
     A::Error: IntoResponse,
@@ -368,8 +375,9 @@ where
                 StatusCode::BAD_REQUEST,
                 Json(json!({
                     "error": "Invalid UTF-8 in request body"
-                }))
-            ).into_response();
+                })),
+            )
+                .into_response();
         }
     };
 
@@ -383,28 +391,52 @@ where
             debug!("✓ Deserialization SUCCEEDED");
             debug!("Parsed SettleRequest:");
             debug!("  - x402_version: {:?}", req.x402_version);
-            debug!("  - payment_payload.scheme: {:?}", req.payment_payload.scheme);
-            debug!("  - payment_payload.network: {:?}", req.payment_payload.network);
+            debug!(
+                "  - payment_payload.scheme: {:?}",
+                req.payment_payload.scheme
+            );
+            debug!(
+                "  - payment_payload.network: {:?}",
+                req.payment_payload.network
+            );
 
             // Log the authorization details based on payload type
             match &req.payment_payload.payload {
                 crate::types::ExactPaymentPayload::Evm(evm_payload) => {
                     debug!("  - payload type: EVM");
-                    debug!("  - authorization.from: {} (type: EvmAddress)", evm_payload.authorization.from);
-                    debug!("  - authorization.to: {} (type: EvmAddress)", evm_payload.authorization.to);
-                    debug!("  - authorization.value: {} (type: TokenAmount/U256 string)", evm_payload.authorization.value);
+                    debug!(
+                        "  - authorization.from: {} (type: EvmAddress)",
+                        evm_payload.authorization.from
+                    );
+                    debug!(
+                        "  - authorization.to: {} (type: EvmAddress)",
+                        evm_payload.authorization.to
+                    );
+                    debug!(
+                        "  - authorization.value: {} (type: TokenAmount/U256 string)",
+                        evm_payload.authorization.value
+                    );
                     debug!("  - authorization.validAfter: {} (type: UnixTimestamp u64 string, parsed to: {})",
                         evm_payload.authorization.valid_after.seconds_since_epoch(),
                         evm_payload.authorization.valid_after.seconds_since_epoch());
                     debug!("  - authorization.validBefore: {} (type: UnixTimestamp u64 string, parsed to: {})",
                         evm_payload.authorization.valid_before.seconds_since_epoch(),
                         evm_payload.authorization.valid_before.seconds_since_epoch());
-                    debug!("  - authorization.nonce: {:?} (type: HexEncodedNonce, 32-byte hex string)", evm_payload.authorization.nonce);
-                    debug!("  - signature: {:?} (type: EvmSignature, hex bytes)", evm_payload.signature);
+                    debug!(
+                        "  - authorization.nonce: {:?} (type: HexEncodedNonce, 32-byte hex string)",
+                        evm_payload.authorization.nonce
+                    );
+                    debug!(
+                        "  - signature: {:?} (type: EvmSignature, hex bytes)",
+                        evm_payload.signature
+                    );
                 }
                 crate::types::ExactPaymentPayload::Solana(solana_payload) => {
                     debug!("  - payload type: Solana");
-                    debug!("  - transaction: {} (truncated)", &solana_payload.transaction[..solana_payload.transaction.len().min(100)]);
+                    debug!(
+                        "  - transaction: {} (truncated)",
+                        &solana_payload.transaction[..solana_payload.transaction.len().min(100)]
+                    );
                 }
             }
 
@@ -446,7 +478,9 @@ where
                                 error!("Authorization fields:");
 
                                 // Check each field and its type
-                                for (key, value) in authorization.as_object().unwrap_or(&serde_json::Map::new()) {
+                                for (key, value) in
+                                    authorization.as_object().unwrap_or(&serde_json::Map::new())
+                                {
                                     let value_type = match value {
                                         serde_json::Value::String(_) => "string",
                                         serde_json::Value::Number(_) => "number",
@@ -474,7 +508,10 @@ where
                                         if let Some(s) = value.as_str() {
                                             if !s.starts_with("0x") || s.len() != 66 {
                                                 error!("    ⚠ EXPECTED: 0x-prefixed 64-char hex string (66 chars total)");
-                                                error!("    ⚠ RECEIVED: string with length {}", s.len());
+                                                error!(
+                                                    "    ⚠ RECEIVED: string with length {}",
+                                                    s.len()
+                                                );
                                             }
                                         }
                                     }
@@ -506,15 +543,19 @@ where
                 Json(json!({
                     "error": format!("Failed to deserialize SettleRequest: {}", e),
                     "details": "Check server logs for detailed field-by-field analysis"
-                }))
-            ).into_response();
+                })),
+            )
+                .into_response();
         }
     };
 
     debug!("=== END SETTLE REQUEST DEBUG ===");
 
     // Proceed with normal settlement logic
-    info!("Attempting to settle payment on network: {:?}", body.payment_payload.network);
+    info!(
+        "Attempting to settle payment on network: {:?}",
+        body.payment_payload.network
+    );
 
     match facilitator.settle(&body).await {
         Ok(valid_response) => {
@@ -523,9 +564,7 @@ where
                 if let Some(ref tx_hash) = valid_response.transaction {
                     info!(
                         "✓ SETTLEMENT SUCCESSFUL - network={:?}, payer={:?}, tx_hash={:?}",
-                        valid_response.network,
-                        valid_response.payer,
-                        tx_hash
+                        valid_response.network, valid_response.payer, tx_hash
                     );
                 } else {
                     warn!(
@@ -543,12 +582,11 @@ where
                 );
             }
             (StatusCode::OK, Json(valid_response)).into_response()
-        },
+        }
         Err(error) => {
             error!(
                 "✗ SETTLEMENT ERROR - error={:?}, network={:?}",
-                error,
-                body.payment_payload.network
+                error, body.payment_payload.network
             );
             warn!(
                 error = ?error,
@@ -664,4 +702,3 @@ impl IntoResponse for FacilitatorLocalError {
         }
     }
 }
-

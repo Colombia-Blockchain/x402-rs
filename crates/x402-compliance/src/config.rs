@@ -64,8 +64,9 @@ pub enum FailModeType {
 impl Config {
     pub fn from_file(path: impl Into<PathBuf>) -> Result<Self> {
         let path = path.into();
-        let content = std::fs::read_to_string(&path)
-            .map_err(|e| ComplianceError::ConfigError(format!("Failed to read config file: {}", e)))?;
+        let content = std::fs::read_to_string(&path).map_err(|e| {
+            ComplianceError::ConfigError(format!("Failed to read config file: {}", e))
+        })?;
 
         toml::from_str(&content).map_err(ComplianceError::TomlError)
     }

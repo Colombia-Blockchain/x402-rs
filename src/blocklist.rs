@@ -20,15 +20,17 @@ pub struct Blacklist {
 
 impl Blacklist {
     pub fn load_from_file<P: AsRef<Path>>(path: P) -> Result<Self, BlacklistError> {
-        let content = fs::read_to_string(path)
-            .map_err(|e| BlacklistError::FileReadError(format!("Failed to read blacklist file: {}", e)))?;
+        let content = fs::read_to_string(path).map_err(|e| {
+            BlacklistError::FileReadError(format!("Failed to read blacklist file: {}", e))
+        })?;
 
         Self::load_from_string(&content)
     }
 
     pub fn load_from_string(content: &str) -> Result<Self, BlacklistError> {
-        let entries: Vec<BlacklistEntry> = serde_json::from_str(content)
-            .map_err(|e| BlacklistError::ParseError(format!("Failed to parse blacklist JSON: {}", e)))?;
+        let entries: Vec<BlacklistEntry> = serde_json::from_str(content).map_err(|e| {
+            BlacklistError::ParseError(format!("Failed to parse blacklist JSON: {}", e))
+        })?;
 
         let mut evm_addresses = HashSet::new();
         let mut solana_addresses = HashSet::new();
@@ -83,7 +85,9 @@ impl Blacklist {
         if self.evm_addresses.contains(&normalized) {
             self.entries
                 .iter()
-                .find(|e| e.account_type.to_lowercase() == "evm" && e.wallet.to_lowercase() == normalized)
+                .find(|e| {
+                    e.account_type.to_lowercase() == "evm" && e.wallet.to_lowercase() == normalized
+                })
                 .map(|e| e.reason.clone())
         } else {
             None
@@ -95,7 +99,10 @@ impl Blacklist {
         if self.solana_addresses.contains(&normalized) {
             self.entries
                 .iter()
-                .find(|e| e.account_type.to_lowercase() == "solana" && e.wallet.to_lowercase() == normalized)
+                .find(|e| {
+                    e.account_type.to_lowercase() == "solana"
+                        && e.wallet.to_lowercase() == normalized
+                })
                 .map(|e| e.reason.clone())
         } else {
             None
@@ -158,7 +165,9 @@ mod tests {
 
         let blacklist = Blacklist::load_from_string(json).unwrap();
         assert_eq!(blacklist.total_blocked(), 2);
-        assert!(blacklist.is_evm_blocked("0x1234567890123456789012345678901234567890").is_some());
+        assert!(blacklist
+            .is_evm_blocked("0x1234567890123456789012345678901234567890")
+            .is_some());
         assert!(blacklist.is_solana_blocked("ABC123").is_some());
     }
 

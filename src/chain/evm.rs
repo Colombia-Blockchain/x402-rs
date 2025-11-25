@@ -19,27 +19,27 @@ use alloy::dyn_abi::SolType;
 use alloy::network::{
     Ethereum as AlloyEthereum, EthereumWallet, NetworkWallet, TransactionBuilder,
 };
-use alloy::primitives::{Address, Bytes, FixedBytes, U256, address};
-use std::future::{Future, IntoFuture};
-use alloy::providers::ProviderBuilder;
+use alloy::primitives::{address, Address, Bytes, FixedBytes, U256};
 use alloy::providers::bindings::IMulticall3;
 use alloy::providers::fillers::NonceManager;
 use alloy::providers::fillers::{
     BlobGasFiller, ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller, WalletFiller,
 };
+use alloy::providers::ProviderBuilder;
 use alloy::providers::{
-    Identity, MULTICALL3_ADDRESS, MulticallItem, Provider, RootProvider, WalletProvider,
+    Identity, MulticallItem, Provider, RootProvider, WalletProvider, MULTICALL3_ADDRESS,
 };
 use alloy::rpc::client::RpcClient;
 use alloy::rpc::types::{TransactionReceipt, TransactionRequest};
-use alloy::sol_types::{Eip712Domain, SolCall, SolStruct, eip712_domain};
+use alloy::sol_types::{eip712_domain, Eip712Domain, SolCall, SolStruct};
 use alloy::{hex, sol};
 use async_trait::async_trait;
 use dashmap::DashMap;
-use std::sync::Arc;
+use std::future::{Future, IntoFuture};
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
 use tokio::sync::Mutex;
-use tracing::{Instrument, instrument};
+use tracing::{instrument, Instrument};
 use tracing_core::Level;
 
 use crate::chain::{FacilitatorLocalError, FromEnvByNetworkBuild, NetworkProviderOps};
@@ -147,6 +147,7 @@ impl TryFrom<Network> for EvmChain {
             Network::ArbitrumSepolia => Ok(EvmChain::new(value, 421614)),
             Network::Unichain => Ok(EvmChain::new(value, 130)),
             Network::UnichainSepolia => Ok(EvmChain::new(value, 1301)),
+            Network::Monad => Ok(EvmChain::new(value, 143)),
         }
     }
 }
@@ -222,7 +223,10 @@ impl EvmProvider {
             GasFiller,
             JoinFill::new(
                 BlobGasFiller,
-                JoinFill::new(NonceFiller::new(nonce_manager.clone()), ChainIdFiller::default()),
+                JoinFill::new(
+                    NonceFiller::new(nonce_manager.clone()),
+                    ChainIdFiller::default(),
+                ),
             ),
         );
 
@@ -374,7 +378,7 @@ impl MetaEvmProvider for EvmProvider {
             std::env::var("TX_RECEIPT_TIMEOUT_SECS")
                 .ok()
                 .and_then(|s| s.parse().ok())
-                .unwrap_or(default_timeout)
+                .unwrap_or(default_timeout),
         );
 
         let watcher = pending_tx
@@ -439,6 +443,7 @@ impl FromEnvByNetworkBuild for EvmProvider {
             Network::ArbitrumSepolia => true,
             Network::Unichain => true,
             Network::UnichainSepolia => true,
+            Network::Monad => true,
         };
         let provider = EvmProvider::try_new(wallet, &rpc_url, is_eip1559, network).await?;
         Ok(Some(provider))
