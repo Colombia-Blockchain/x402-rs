@@ -99,6 +99,12 @@ pub enum Network {
     /// NEAR Protocol testnet.
     #[serde(rename = "near-testnet")]
     NearTestnet,
+    /// Stellar mainnet.
+    #[serde(rename = "stellar")]
+    Stellar,
+    /// Stellar testnet.
+    #[serde(rename = "stellar-testnet")]
+    StellarTestnet,
 }
 
 impl Display for Network {
@@ -131,6 +137,8 @@ impl Display for Network {
             Network::Monad => write!(f, "monad"),
             Network::Near => write!(f, "near"),
             Network::NearTestnet => write!(f, "near-testnet"),
+            Network::Stellar => write!(f, "stellar"),
+            Network::StellarTestnet => write!(f, "stellar-testnet"),
         }
     }
 }
@@ -140,6 +148,7 @@ pub enum NetworkFamily {
     Evm,
     Solana,
     Near,
+    Stellar,
 }
 
 impl From<Network> for NetworkFamily {
@@ -172,6 +181,8 @@ impl From<Network> for NetworkFamily {
             Network::Monad => NetworkFamily::Evm,
             Network::Near => NetworkFamily::Near,
             Network::NearTestnet => NetworkFamily::Near,
+            Network::Stellar => NetworkFamily::Stellar,
+            Network::StellarTestnet => NetworkFamily::Stellar,
         }
     }
 }
@@ -207,6 +218,8 @@ impl Network {
             Network::Monad,
             Network::Near,
             Network::NearTestnet,
+            Network::Stellar,
+            Network::StellarTestnet,
         ]
     }
 
@@ -226,6 +239,7 @@ impl Network {
                 | Network::ArbitrumSepolia
                 | Network::UnichainSepolia
                 | Network::NearTestnet
+                | Network::StellarTestnet
         )
     }
 
@@ -633,6 +647,35 @@ static USDC_NEAR_TESTNET: Lazy<USDCDeployment> = Lazy::new(|| {
     })
 });
 
+/// Lazily initialized known USDC deployment on Stellar mainnet as [`USDCDeployment`].
+/// Note: Stellar USDC has 7 decimals (not 6 like other chains).
+static USDC_STELLAR: Lazy<USDCDeployment> = Lazy::new(|| {
+    USDCDeployment(TokenDeployment {
+        asset: TokenAsset {
+            address: MixedAddress::Stellar(
+                "CCW67TSZV3SSS2HXMBQ5JFGCKJNXKZM7UQUWUZPUTHXSTZLEO7SJMI75".to_string(),
+            ),
+            network: Network::Stellar,
+        },
+        decimals: 7, // Stellar USDC uses 7 decimals
+        eip712: None, // Stellar uses XDR, not EIP-712
+    })
+});
+
+/// Lazily initialized known USDC deployment on Stellar testnet as [`USDCDeployment`].
+static USDC_STELLAR_TESTNET: Lazy<USDCDeployment> = Lazy::new(|| {
+    USDCDeployment(TokenDeployment {
+        asset: TokenAsset {
+            address: MixedAddress::Stellar(
+                "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA".to_string(),
+            ),
+            network: Network::StellarTestnet,
+        },
+        decimals: 7, // Stellar USDC uses 7 decimals
+        eip712: None,
+    })
+});
+
 /// A known USDC deployment as a wrapper around [`TokenDeployment`].
 #[derive(Clone, Debug)]
 pub struct USDCDeployment(pub TokenDeployment);
@@ -696,6 +739,8 @@ impl USDCDeployment {
             Network::Monad => &USDC_MONAD,
             Network::Near => &USDC_NEAR,
             Network::NearTestnet => &USDC_NEAR_TESTNET,
+            Network::Stellar => &USDC_STELLAR,
+            Network::StellarTestnet => &USDC_STELLAR_TESTNET,
         }
     }
 }
