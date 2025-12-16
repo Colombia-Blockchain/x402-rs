@@ -841,15 +841,40 @@ impl TransactionInt {
         commitment_config: CommitmentConfig,
     ) -> Result<Signature, FacilitatorLocalError> {
         let tx_sig = self.send(rpc_client).await?;
-        loop {
-            let confirmed = rpc_client
-                .confirm_transaction_with_commitment(&tx_sig, commitment_config)
-                .await
-                .map_err(|e| FacilitatorLocalError::ContractCall(format!("{e}")))?;
-            if confirmed.value {
-                return Ok(tx_sig);
+
+        // Timeout for confirmation - configurable via environment variable
+        // Default: 30 seconds (Solana blocks are ~400ms, 30s = ~75 blocks)
+        let timeout_secs = std::env::var("SOLANA_CONFIRM_TIMEOUT_SECS")
+            .ok()
+            .and_then(|s| s.parse::<u64>().ok())
+            .unwrap_or(30);
+        let timeout_duration = Duration::from_secs(timeout_secs);
+
+        let confirmation_future = async {
+            loop {
+                let confirmed = rpc_client
+                    .confirm_transaction_with_commitment(&tx_sig, commitment_config)
+                    .await
+                    .map_err(|e| FacilitatorLocalError::ContractCall(format!("{e}")))?;
+                if confirmed.value {
+                    return Ok::<Signature, FacilitatorLocalError>(tx_sig);
+                }
+                tokio::time::sleep(Duration::from_millis(500)).await;
             }
-            tokio::time::sleep(Duration::from_millis(500)).await;
+        };
+
+        match tokio::time::timeout(timeout_duration, confirmation_future).await {
+            Ok(result) => result,
+            Err(_) => {
+                tracing::warn!(
+                    tx_sig = %tx_sig,
+                    timeout_secs = timeout_secs,
+                    "Transaction confirmation timed out"
+                );
+                Err(FacilitatorLocalError::ContractCall(
+                    format!("Transaction confirmation timed out after {}s. TX may have been submitted: {}", timeout_secs, tx_sig)
+                ))
+            }
         }
     }
 
