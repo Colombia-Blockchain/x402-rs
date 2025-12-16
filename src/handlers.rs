@@ -22,7 +22,6 @@ use crate::chain::FacilitatorLocalError;
 use crate::fhe_proxy::FheProxy;
 use crate::facilitator::Facilitator;
 use crate::types::{
-    Scheme,
     ErrorResponse, FacilitatorErrorReason, MixedAddress, SettleRequest, VerifyRequest,
     VerifyResponse, X402Version,
 };
@@ -401,6 +400,37 @@ where
         }
     };
 
+    // Check for FHE scheme BEFORE trying to parse as standard types
+    // FHE requests may have different payload structures that don't match standard x402 types
+    if let Ok(json_value) = serde_json::from_str::<serde_json::Value>(body_str) {
+        let scheme = json_value
+            .get("paymentPayload")
+            .and_then(|pp| pp.get("scheme"))
+            .and_then(|s| s.as_str());
+
+        if scheme == Some("fhe-transfer") {
+            info!("Detected fhe-transfer scheme, routing to Zama Lambda facilitator");
+
+            match FHE_PROXY.verify(&json_value).await {
+                Ok(fhe_response) => {
+                    info!(is_valid = fhe_response.is_valid, "FHE verification complete");
+                    return (StatusCode::OK, Json(fhe_response)).into_response();
+                }
+                Err(e) => {
+                    error!(error = %e, "FHE verification failed");
+                    return (
+                        StatusCode::BAD_GATEWAY,
+                        Json(json!({
+                            "isValid": false,
+                            "invalidReason": format!("FHE facilitator error: {}", e)
+                        })),
+                    )
+                        .into_response();
+                }
+            }
+        }
+    }
+
     // Try to deserialize as envelope (supports both v1 and v2)
     let envelope: VerifyRequestEnvelope = match serde_json::from_str(body_str) {
         Ok(env) => env,
@@ -453,43 +483,8 @@ where
         "Verifying payment"
     );
 
-    // Check if this is an FHE transfer - route to Zama Lambda
-    if v1_request.payment_payload.scheme == Scheme::FheTransfer {
-        info!("Routing fhe-transfer request to Zama Lambda facilitator");
-
-        // Parse the raw body as JSON to forward to Lambda
-        let json_body: serde_json::Value = match serde_json::from_str(body_str) {
-            Ok(v) => v,
-            Err(e) => {
-                error!("Failed to parse body for FHE proxy: {}", e);
-                return (
-                    StatusCode::BAD_REQUEST,
-                    Json(json!({
-                        "error": format!("Failed to parse request body: {}", e)
-                    })),
-                )
-                    .into_response();
-            }
-        };
-
-        match FHE_PROXY.verify(&json_body).await {
-            Ok(fhe_response) => {
-                info!(is_valid = fhe_response.is_valid, "FHE verification complete");
-                return (StatusCode::OK, Json(fhe_response)).into_response();
-            }
-            Err(e) => {
-                error!(error = %e, "FHE verification failed");
-                return (
-                    StatusCode::BAD_GATEWAY,
-                    Json(json!({
-                        "isValid": false,
-                        "invalidReason": format!("FHE facilitator error: {}", e)
-                    })),
-                )
-                    .into_response();
-            }
-        }
-    }
+    // Note: FHE transfers are handled early (before type deserialization) to support
+    // custom FHE payload structures. See the fhe-transfer check above.
 
     // Standard exact scheme - process locally
     match facilitator.verify(&v1_request).await {
@@ -633,6 +628,37 @@ where
     debug!("=== SETTLE REQUEST DEBUG ===");
     debug!("Raw JSON body: {}", body_str);
 
+    // Check for FHE scheme BEFORE trying to parse as standard types
+    // FHE requests may have different payload structures that don't match standard x402 types
+    if let Ok(json_value) = serde_json::from_str::<serde_json::Value>(body_str) {
+        let scheme = json_value
+            .get("paymentPayload")
+            .and_then(|pp| pp.get("scheme"))
+            .and_then(|s| s.as_str());
+
+        if scheme == Some("fhe-transfer") {
+            info!("Detected fhe-transfer scheme, routing settle to Zama Lambda facilitator");
+
+            match FHE_PROXY.settle(&json_value).await {
+                Ok(fhe_response) => {
+                    info!("FHE settlement complete");
+                    return (StatusCode::OK, Json(fhe_response)).into_response();
+                }
+                Err(e) => {
+                    error!(error = %e, "FHE settlement failed");
+                    return (
+                        StatusCode::BAD_GATEWAY,
+                        Json(json!({
+                            "success": false,
+                            "errorReason": format!("FHE facilitator error: {}", e)
+                        })),
+                    )
+                        .into_response();
+                }
+            }
+        }
+    }
+
     // Try to deserialize as envelope (supports both v1 and v2)
     let envelope: SettleRequestEnvelope = match serde_json::from_str(body_str) {
         Ok(env) => env,
@@ -763,49 +789,13 @@ where
     debug!("=== END SETTLE REQUEST DEBUG ===");
 
     // Proceed with normal settlement logic
+    // Note: FHE transfers are handled early (before type deserialization) to support
+    // custom FHE payload structures. See the fhe-transfer check above.
     info!(
         "Attempting to settle payment on network: {:?}, scheme: {:?}",
         body.payment_payload.network,
         body.payment_payload.scheme
     );
-
-    // Check if this is an FHE transfer - route to Zama Lambda
-    if body.payment_payload.scheme == Scheme::FheTransfer {
-        info!("Routing fhe-transfer settle request to Zama Lambda facilitator");
-
-        // Parse the raw body as JSON to forward to Lambda
-        let json_body: serde_json::Value = match serde_json::from_str(body_str) {
-            Ok(v) => v,
-            Err(e) => {
-                error!("Failed to parse body for FHE proxy: {}", e);
-                return (
-                    StatusCode::BAD_REQUEST,
-                    Json(json!({
-                        "error": format!("Failed to parse request body: {}", e)
-                    })),
-                )
-                    .into_response();
-            }
-        };
-
-        match FHE_PROXY.settle(&json_body).await {
-            Ok(fhe_response) => {
-                info!("FHE settlement complete");
-                return (StatusCode::OK, Json(fhe_response)).into_response();
-            }
-            Err(e) => {
-                error!(error = %e, "FHE settlement failed");
-                return (
-                    StatusCode::BAD_GATEWAY,
-                    Json(json!({
-                        "success": false,
-                        "errorReason": format!("FHE facilitator error: {}", e)
-                    })),
-                )
-                    .into_response();
-            }
-        }
-    }
 
     // Standard exact scheme - process locally
     match facilitator.settle(&body).await {

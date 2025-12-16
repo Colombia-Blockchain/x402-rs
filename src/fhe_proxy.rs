@@ -30,7 +30,9 @@ impl Default for FheProxyConfig {
         Self {
             endpoint: std::env::var("FHE_FACILITATOR_URL")
                 .unwrap_or_else(|_| "https://zama-facilitator.ultravioletadao.xyz".to_string()),
-            timeout_secs: 30,
+            // FHE decryption via Zama relayer can take longer than typical requests
+            // Lambda has 60s timeout, we add buffer for cold starts
+            timeout_secs: 90,
         }
     }
 }
