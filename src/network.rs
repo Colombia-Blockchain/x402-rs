@@ -3,7 +3,7 @@
 //! This module defines supported networks and their chain IDs,
 //! and provides statically known USDC deployments per network.
 
-use crate::types::{MixedAddress, TokenAsset, TokenDeployment, TokenDeploymentEip712};
+use crate::types::{MixedAddress, TokenAsset, TokenDeployment, TokenDeploymentEip712, TokenType};
 use alloy::primitives::address;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
@@ -925,5 +925,513 @@ impl USDCDeployment {
             Network::Fogo => &USDC_FOGO,
             Network::FogoTestnet => &USDC_FOGO_TESTNET,
         }
+    }
+}
+
+// ============================================================================
+// EURC (Euro Coin) Deployments - Circle
+// ============================================================================
+
+/// EURC deployment on Ethereum mainnet.
+static EURC_ETHEREUM: Lazy<EURCDeployment> = Lazy::new(|| {
+    EURCDeployment(TokenDeployment {
+        asset: TokenAsset {
+            address: address!("0x1aBaEA1f7C830bD89Acc67eC4af516284b1bC33c").into(),
+            network: Network::Ethereum,
+        },
+        decimals: 6,
+        eip712: Some(TokenDeploymentEip712 {
+            name: "Euro Coin".into(),
+            version: "2".into(),
+        }),
+    })
+});
+
+/// EURC deployment on Base mainnet.
+static EURC_BASE: Lazy<EURCDeployment> = Lazy::new(|| {
+    EURCDeployment(TokenDeployment {
+        asset: TokenAsset {
+            address: address!("0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42").into(),
+            network: Network::Base,
+        },
+        decimals: 6,
+        eip712: Some(TokenDeploymentEip712 {
+            name: "Euro Coin".into(),
+            version: "2".into(),
+        }),
+    })
+});
+
+/// EURC deployment on Avalanche mainnet.
+static EURC_AVALANCHE: Lazy<EURCDeployment> = Lazy::new(|| {
+    EURCDeployment(TokenDeployment {
+        asset: TokenAsset {
+            address: address!("0xC891EB4cbdEFf6e073e859e987815Ed1505c2ACD").into(),
+            network: Network::Avalanche,
+        },
+        decimals: 6,
+        eip712: Some(TokenDeploymentEip712 {
+            name: "Euro Coin".into(),
+            version: "2".into(),
+        }),
+    })
+});
+
+/// A known EURC (Euro Coin) deployment as a wrapper around [`TokenDeployment`].
+#[derive(Clone, Debug)]
+pub struct EURCDeployment(pub TokenDeployment);
+
+impl Deref for EURCDeployment {
+    type Target = TokenDeployment;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl From<&EURCDeployment> for TokenDeployment {
+    fn from(deployment: &EURCDeployment) -> Self {
+        deployment.0.clone()
+    }
+}
+
+impl EURCDeployment {
+    /// Return the known EURC deployment for the given network.
+    ///
+    /// Returns `None` if EURC is not deployed on the specified network.
+    pub fn by_network<N: Borrow<Network>>(network: N) -> Option<&'static EURCDeployment> {
+        match network.borrow() {
+            Network::Ethereum => Some(&EURC_ETHEREUM),
+            Network::Base => Some(&EURC_BASE),
+            Network::Avalanche => Some(&EURC_AVALANCHE),
+            _ => None,
+        }
+    }
+
+    /// Return all networks where EURC is deployed.
+    pub fn supported_networks() -> &'static [Network] {
+        &[Network::Ethereum, Network::Base, Network::Avalanche]
+    }
+}
+
+// ============================================================================
+// AUSD (Agora USD) Deployments - Agora Finance
+// Uses deterministic CREATE2 address: 0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a
+// ============================================================================
+
+/// AUSD deployment on Ethereum mainnet.
+static AUSD_ETHEREUM: Lazy<AUSDDeployment> = Lazy::new(|| {
+    AUSDDeployment(TokenDeployment {
+        asset: TokenAsset {
+            address: address!("0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a").into(),
+            network: Network::Ethereum,
+        },
+        decimals: 6,
+        eip712: Some(TokenDeploymentEip712 {
+            name: "AUSD".into(),
+            version: "1".into(),
+        }),
+    })
+});
+
+/// AUSD deployment on Polygon mainnet.
+static AUSD_POLYGON: Lazy<AUSDDeployment> = Lazy::new(|| {
+    AUSDDeployment(TokenDeployment {
+        asset: TokenAsset {
+            address: address!("0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a").into(),
+            network: Network::Polygon,
+        },
+        decimals: 6,
+        eip712: Some(TokenDeploymentEip712 {
+            name: "AUSD".into(),
+            version: "1".into(),
+        }),
+    })
+});
+
+/// AUSD deployment on Arbitrum mainnet.
+static AUSD_ARBITRUM: Lazy<AUSDDeployment> = Lazy::new(|| {
+    AUSDDeployment(TokenDeployment {
+        asset: TokenAsset {
+            address: address!("0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a").into(),
+            network: Network::Arbitrum,
+        },
+        decimals: 6,
+        eip712: Some(TokenDeploymentEip712 {
+            name: "AUSD".into(),
+            version: "1".into(),
+        }),
+    })
+});
+
+/// AUSD deployment on Avalanche mainnet.
+static AUSD_AVALANCHE: Lazy<AUSDDeployment> = Lazy::new(|| {
+    AUSDDeployment(TokenDeployment {
+        asset: TokenAsset {
+            address: address!("0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a").into(),
+            network: Network::Avalanche,
+        },
+        decimals: 6,
+        eip712: Some(TokenDeploymentEip712 {
+            name: "AUSD".into(),
+            version: "1".into(),
+        }),
+    })
+});
+
+/// AUSD deployment on Monad mainnet.
+static AUSD_MONAD: Lazy<AUSDDeployment> = Lazy::new(|| {
+    AUSDDeployment(TokenDeployment {
+        asset: TokenAsset {
+            address: address!("0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a").into(),
+            network: Network::Monad,
+        },
+        decimals: 6,
+        eip712: Some(TokenDeploymentEip712 {
+            name: "AUSD".into(),
+            version: "1".into(),
+        }),
+    })
+});
+
+/// A known AUSD (Agora USD) deployment as a wrapper around [`TokenDeployment`].
+#[derive(Clone, Debug)]
+pub struct AUSDDeployment(pub TokenDeployment);
+
+impl Deref for AUSDDeployment {
+    type Target = TokenDeployment;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl From<&AUSDDeployment> for TokenDeployment {
+    fn from(deployment: &AUSDDeployment) -> Self {
+        deployment.0.clone()
+    }
+}
+
+impl AUSDDeployment {
+    /// Return the known AUSD deployment for the given network.
+    ///
+    /// Returns `None` if AUSD is not deployed on the specified network.
+    /// Note: AUSD uses CREATE2, so address is same on all supported chains.
+    pub fn by_network<N: Borrow<Network>>(network: N) -> Option<&'static AUSDDeployment> {
+        match network.borrow() {
+            Network::Ethereum => Some(&AUSD_ETHEREUM),
+            Network::Polygon => Some(&AUSD_POLYGON),
+            Network::Arbitrum => Some(&AUSD_ARBITRUM),
+            Network::Avalanche => Some(&AUSD_AVALANCHE),
+            Network::Monad => Some(&AUSD_MONAD),
+            _ => None,
+        }
+    }
+
+    /// Return all networks where AUSD is deployed with EIP-3009 support.
+    pub fn supported_networks() -> &'static [Network] {
+        &[
+            Network::Ethereum,
+            Network::Polygon,
+            Network::Arbitrum,
+            Network::Avalanche,
+            Network::Monad,
+        ]
+    }
+}
+
+// ============================================================================
+// PYUSD (PayPal USD) Deployments - PayPal/Paxos
+// ============================================================================
+
+/// PYUSD deployment on Ethereum mainnet.
+static PYUSD_ETHEREUM: Lazy<PYUSDDeployment> = Lazy::new(|| {
+    PYUSDDeployment(TokenDeployment {
+        asset: TokenAsset {
+            address: address!("0x6c3ea9036406852006290770BEdFcAbA0e23A0e8").into(),
+            network: Network::Ethereum,
+        },
+        decimals: 6,
+        eip712: Some(TokenDeploymentEip712 {
+            name: "PayPal USD".into(),
+            version: "1".into(),
+        }),
+    })
+});
+
+/// A known PYUSD (PayPal USD) deployment as a wrapper around [`TokenDeployment`].
+#[derive(Clone, Debug)]
+pub struct PYUSDDeployment(pub TokenDeployment);
+
+impl Deref for PYUSDDeployment {
+    type Target = TokenDeployment;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl From<&PYUSDDeployment> for TokenDeployment {
+    fn from(deployment: &PYUSDDeployment) -> Self {
+        deployment.0.clone()
+    }
+}
+
+impl PYUSDDeployment {
+    /// Return the known PYUSD deployment for the given network.
+    ///
+    /// Returns `None` if PYUSD is not deployed on the specified network.
+    /// Note: PYUSD is currently only available on Ethereum mainnet.
+    pub fn by_network<N: Borrow<Network>>(network: N) -> Option<&'static PYUSDDeployment> {
+        match network.borrow() {
+            Network::Ethereum => Some(&PYUSD_ETHEREUM),
+            _ => None,
+        }
+    }
+
+    /// Return all networks where PYUSD is deployed.
+    pub fn supported_networks() -> &'static [Network] {
+        &[Network::Ethereum]
+    }
+}
+
+// ============================================================================
+// GHO Deployments - Aave
+// Note: GHO uses 18 decimals (not 6 like USDC)
+// ============================================================================
+
+/// GHO deployment on Ethereum mainnet.
+static GHO_ETHEREUM: Lazy<GHODeployment> = Lazy::new(|| {
+    GHODeployment(TokenDeployment {
+        asset: TokenAsset {
+            address: address!("0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f").into(),
+            network: Network::Ethereum,
+        },
+        decimals: 18,
+        eip712: Some(TokenDeploymentEip712 {
+            name: "Gho Token".into(),
+            version: "1".into(),
+        }),
+    })
+});
+
+/// GHO deployment on Arbitrum mainnet.
+static GHO_ARBITRUM: Lazy<GHODeployment> = Lazy::new(|| {
+    GHODeployment(TokenDeployment {
+        asset: TokenAsset {
+            address: address!("0x7dfF72693f6A4149b17e7C6314655f6A9F7c8B33").into(),
+            network: Network::Arbitrum,
+        },
+        decimals: 18,
+        eip712: Some(TokenDeploymentEip712 {
+            name: "Gho Token".into(),
+            version: "1".into(),
+        }),
+    })
+});
+
+/// GHO deployment on Base mainnet.
+static GHO_BASE: Lazy<GHODeployment> = Lazy::new(|| {
+    GHODeployment(TokenDeployment {
+        asset: TokenAsset {
+            address: address!("0x6Bb7a212910682DCFdbd5BCBb3e28FB4E8da10Ee").into(),
+            network: Network::Base,
+        },
+        decimals: 18,
+        eip712: Some(TokenDeploymentEip712 {
+            name: "Gho Token".into(),
+            version: "1".into(),
+        }),
+    })
+});
+
+/// A known GHO deployment as a wrapper around [`TokenDeployment`].
+#[derive(Clone, Debug)]
+pub struct GHODeployment(pub TokenDeployment);
+
+impl Deref for GHODeployment {
+    type Target = TokenDeployment;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl From<&GHODeployment> for TokenDeployment {
+    fn from(deployment: &GHODeployment) -> Self {
+        deployment.0.clone()
+    }
+}
+
+impl GHODeployment {
+    /// Return the known GHO deployment for the given network.
+    ///
+    /// Returns `None` if GHO is not deployed on the specified network.
+    pub fn by_network<N: Borrow<Network>>(network: N) -> Option<&'static GHODeployment> {
+        match network.borrow() {
+            Network::Ethereum => Some(&GHO_ETHEREUM),
+            Network::Arbitrum => Some(&GHO_ARBITRUM),
+            Network::Base => Some(&GHO_BASE),
+            _ => None,
+        }
+    }
+
+    /// Return all networks where GHO is deployed.
+    pub fn supported_networks() -> &'static [Network] {
+        &[Network::Ethereum, Network::Arbitrum, Network::Base]
+    }
+}
+
+// ============================================================================
+// crvUSD Deployments - Curve Finance
+// Note: crvUSD uses 18 decimals (not 6 like USDC)
+// Only Ethereum and Arbitrum have verified EIP-3009 support
+// ============================================================================
+
+/// crvUSD deployment on Ethereum mainnet.
+static CRVUSD_ETHEREUM: Lazy<CrvUSDDeployment> = Lazy::new(|| {
+    CrvUSDDeployment(TokenDeployment {
+        asset: TokenAsset {
+            address: address!("0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E").into(),
+            network: Network::Ethereum,
+        },
+        decimals: 18,
+        eip712: Some(TokenDeploymentEip712 {
+            name: "Curve.Fi USD Stablecoin".into(),
+            version: "1".into(),
+        }),
+    })
+});
+
+/// crvUSD deployment on Arbitrum mainnet.
+static CRVUSD_ARBITRUM: Lazy<CrvUSDDeployment> = Lazy::new(|| {
+    CrvUSDDeployment(TokenDeployment {
+        asset: TokenAsset {
+            address: address!("0x498Bf2B1e120FeD3ad3D42EA2165E9b73f99C1e5").into(),
+            network: Network::Arbitrum,
+        },
+        decimals: 18,
+        eip712: Some(TokenDeploymentEip712 {
+            name: "Curve.Fi USD Stablecoin".into(),
+            version: "1".into(),
+        }),
+    })
+});
+
+/// A known crvUSD deployment as a wrapper around [`TokenDeployment`].
+#[derive(Clone, Debug)]
+pub struct CrvUSDDeployment(pub TokenDeployment);
+
+impl Deref for CrvUSDDeployment {
+    type Target = TokenDeployment;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl From<&CrvUSDDeployment> for TokenDeployment {
+    fn from(deployment: &CrvUSDDeployment) -> Self {
+        deployment.0.clone()
+    }
+}
+
+impl CrvUSDDeployment {
+    /// Return the known crvUSD deployment for the given network.
+    ///
+    /// Returns `None` if crvUSD is not deployed on the specified network.
+    /// Note: Only Ethereum and Arbitrum have verified EIP-3009 support.
+    pub fn by_network<N: Borrow<Network>>(network: N) -> Option<&'static CrvUSDDeployment> {
+        match network.borrow() {
+            Network::Ethereum => Some(&CRVUSD_ETHEREUM),
+            Network::Arbitrum => Some(&CRVUSD_ARBITRUM),
+            _ => None,
+        }
+    }
+
+    /// Return all networks where crvUSD is deployed with EIP-3009 support.
+    pub fn supported_networks() -> &'static [Network] {
+        &[Network::Ethereum, Network::Arbitrum]
+    }
+}
+
+// ============================================================================
+// Generic Token Deployment Lookup
+// ============================================================================
+
+/// Get a token deployment for any supported token type on a given network.
+///
+/// Returns `None` if the token is not deployed on the specified network.
+/// For USDC, this always returns `Some` as USDC is deployed on all networks.
+///
+/// # Example
+/// ```ignore
+/// use x402_rs::network::{get_token_deployment, Network};
+/// use x402_rs::types::TokenType;
+///
+/// let deployment = get_token_deployment(Network::Ethereum, TokenType::Eurc);
+/// assert!(deployment.is_some());
+/// ```
+pub fn get_token_deployment(network: Network, token_type: TokenType) -> Option<TokenDeployment> {
+    match token_type {
+        TokenType::Usdc => Some(USDCDeployment::by_network(network).0.clone()),
+        TokenType::Eurc => EURCDeployment::by_network(network).map(|d| d.0.clone()),
+        TokenType::Ausd => AUSDDeployment::by_network(network).map(|d| d.0.clone()),
+        TokenType::Pyusd => PYUSDDeployment::by_network(network).map(|d| d.0.clone()),
+        TokenType::Gho => GHODeployment::by_network(network).map(|d| d.0.clone()),
+        TokenType::CrvUsd => CrvUSDDeployment::by_network(network).map(|d| d.0.clone()),
+    }
+}
+
+/// Check if a token type is supported on a given network.
+///
+/// # Example
+/// ```ignore
+/// use x402_rs::network::{is_token_supported, Network};
+/// use x402_rs::types::TokenType;
+///
+/// assert!(is_token_supported(Network::Ethereum, TokenType::Usdc));
+/// assert!(is_token_supported(Network::Ethereum, TokenType::Eurc));
+/// assert!(!is_token_supported(Network::Solana, TokenType::Eurc)); // EURC not on Solana
+/// ```
+pub fn is_token_supported(network: Network, token_type: TokenType) -> bool {
+    get_token_deployment(network, token_type).is_some()
+}
+
+/// Get all supported token types for a given network.
+///
+/// # Example
+/// ```ignore
+/// use x402_rs::network::{supported_tokens_for_network, Network};
+///
+/// let tokens = supported_tokens_for_network(Network::Ethereum);
+/// // Returns [USDC, EURC, AUSD, PYUSD, GHO, crvUSD] for Ethereum
+/// ```
+pub fn supported_tokens_for_network(network: Network) -> Vec<TokenType> {
+    TokenType::all()
+        .iter()
+        .filter(|&&token| is_token_supported(network, token))
+        .copied()
+        .collect()
+}
+
+/// Get all supported networks for a given token type.
+///
+/// # Example
+/// ```ignore
+/// use x402_rs::network::{supported_networks_for_token, Network};
+/// use x402_rs::types::TokenType;
+///
+/// let networks = supported_networks_for_token(TokenType::Eurc);
+/// // Returns [Ethereum, Base, Avalanche]
+/// ```
+pub fn supported_networks_for_token(token_type: TokenType) -> Vec<Network> {
+    match token_type {
+        TokenType::Usdc => Network::variants().to_vec(),
+        TokenType::Eurc => EURCDeployment::supported_networks().to_vec(),
+        TokenType::Ausd => AUSDDeployment::supported_networks().to_vec(),
+        TokenType::Pyusd => PYUSDDeployment::supported_networks().to_vec(),
+        TokenType::Gho => GHODeployment::supported_networks().to_vec(),
+        TokenType::CrvUsd => CrvUSDDeployment::supported_networks().to_vec(),
     }
 }
