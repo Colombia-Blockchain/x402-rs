@@ -1,5 +1,90 @@
 # Changelog
 
+## [1.10.0] - 2025-12-19
+
+### Added - Multi-Stablecoin Support
+
+This release adds support for 6 stablecoins with EIP-3009 `transferWithAuthorization` capability across 14 EVM networks.
+
+#### Supported Tokens
+
+| Token | Networks | Decimals | Description |
+|-------|----------|----------|-------------|
+| **USDC** | All 14 networks | 6 | USD Coin by Circle (default) |
+| **EURC** | Ethereum, Base, Avalanche | 6 | Euro Coin by Circle |
+| **AUSD** | Ethereum, Polygon, Arbitrum, Avalanche | 6 | Agora USD (CREATE2 - same address all chains) |
+| **PYUSD** | Ethereum | 6 | PayPal USD by Paxos |
+| **GHO** | Ethereum, Arbitrum, Base | 18 | Aave stablecoin |
+| **crvUSD** | Ethereum, Arbitrum | 18 | Curve Finance stablecoin |
+
+#### New Features
+
+- **TokenType Enum**: New enum in `src/types.rs` for token identification
+  - Values: `usdc`, `eurc`, `ausd`, `pyusd`, `gho`, `crvusd`
+  - Default: `usdc` for backward compatibility
+  - Methods: `decimals()`, `symbol()`, `all()`
+
+- **Token Deployment Registry**: Comprehensive token contract addresses
+  - `get_token_deployment(network, token_type)` - Get deployment info
+  - `is_token_supported(network, token_type)` - Check availability
+  - `supported_tokens_for_network(network)` - List tokens per network
+  - `supported_networks_for_token(token_type)` - List networks per token
+
+- **Dynamic EIP-712 Validation**: Per-token domain separator calculation
+  - Extracts token type from payment payload
+  - Uses correct token name/version for typed data signing
+  - Handles different decimal places (6 vs 18)
+
+- **Enhanced `/supported` Endpoint**: Token information in response
+  - New `tokens` field with token addresses and decimals per network
+  - `SupportedTokenInfo` struct with token metadata
+
+- **Frontend Token Badges**: Visual token support display
+  - Token pills with per-token colors on network cards
+  - JavaScript-based dynamic rendering
+  - Shows which stablecoins each network supports
+
+#### Contract Addresses
+
+```
+EURC:
+  Ethereum: 0x1aBaEA1f7C830bD89Acc67eC4af516284b1bC33c
+  Base:     0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42
+  Avalanche: 0xC891EB4cbdEFf6e073e859e987815Ed1505c2ACD
+
+AUSD (CREATE2 - same on all chains):
+  0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a
+
+PYUSD:
+  Ethereum: 0x6c3ea9036406852006290770BEdFcAbA0e23A0e8
+
+GHO:
+  Ethereum: 0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f
+  Arbitrum: 0x7dfF72693f6A4149b17e7C6314655f6A9F7c8B33
+  Base:     0x6Bb7a212910682DCFdbd5BCBb3e28FB4E8da10Ee
+
+crvUSD:
+  Ethereum: 0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E
+  Arbitrum: 0x498Bf2B1e120FeD3ad3D42EA2165E9b73f99C1e5
+```
+
+#### Backward Compatibility
+
+- **No breaking changes** - USDC remains the default token
+- Existing clients work without modification
+- `tokenType` is optional in payment payloads (defaults to `usdc`)
+- Non-EVM chains (Solana, NEAR, Stellar) continue with USDC only
+
+#### Test Coverage
+
+- 39 new unit tests for multi-stablecoin functionality
+- TokenType enum serialization/deserialization
+- Token deployment lookups and validation
+- Decimal handling (6 vs 18)
+- Network/token mapping verification
+
+---
+
 ## [1.8.0] - 2025-12-12
 
 ### Added - x402 Protocol v2 Support
