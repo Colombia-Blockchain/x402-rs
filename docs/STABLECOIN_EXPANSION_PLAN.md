@@ -291,6 +291,32 @@ The following networks use **different token standards** and do not support EIP-
 - **Ethereum gas costs** - Expensive for micropayments on mainnet
 - **Limited DeFi integration** - Less integrated than USDC/DAI
 
+#### CRITICAL: Signature Variant Implementation
+
+**PYUSD uses Paxos implementation which ONLY supports the v,r,s signature variant** of `transferWithAuthorization`. This is different from Circle's USDC/EURC which support both variants.
+
+The EIP-3009 standard defines two function signatures:
+1. `transferWithAuthorization(..., bytes signature)` - Compact 65-byte signature
+2. `transferWithAuthorization(..., uint8 v, bytes32 r, bytes32 s)` - Separate components
+
+**Circle's implementation (USDC, EURC, AUSD):** Supports BOTH variants. The facilitator can use either.
+
+**Paxos implementation (PYUSD):** ONLY supports v,r,s variant. Using compact bytes signature will cause `execution reverted` error.
+
+**Facilitator Implementation (v1.9.0+):**
+- `src/chain/evm.rs` detects PYUSD by contract address
+- Uses `transferWithAuthorization_1(v,r,s)` instead of `transferWithAuthorization_0(bytes)`
+- The 65-byte signature is split into `v` (1 byte), `r` (32 bytes), `s` (32 bytes)
+
+```rust
+// src/chain/evm.rs - PYUSD detection
+const PYUSD_ETHEREUM_ADDRESS: Address = address!("6c3ea9036406852006290770BEdFcAbA0e23A0e8");
+
+fn requires_vrs_signature(contract_address: Address) -> bool {
+    contract_address == PYUSD_ETHEREUM_ADDRESS
+}
+```
+
 #### Risk Considerations
 
 - **Single network** - Limits utility for multi-chain facilitator

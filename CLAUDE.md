@@ -391,6 +391,38 @@ python scripts/diagnose_payment.py --network base-mainnet
 python scripts/compare_domain_separator.py
 ```
 
+**CRITICAL: EIP-712 Domain Names Vary by Chain!**
+
+Different chains use different domain names for the same stablecoin:
+
+| Token | Ethereum/Avalanche | Base |
+|-------|-------------------|------|
+| EURC | `"Euro Coin"` | `"EURC"` |
+| USDC | `"USD Coin"` | `"USDC"` (on Celo/HyperEVM/Unichain/Monad) |
+
+The facilitator resolves domains in this priority order:
+1. `PaymentRequirements.extra.name/version` (client-provided)
+2. Static lookup in `src/network.rs` (known deployments)
+3. On-chain `token.name()`/`token.version()` calls (fallback)
+
+**For custom tokens (EURC, AUSD, etc.), clients MUST provide domain info:**
+```json
+{
+  "paymentRequirements": {
+    "asset": "0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42",
+    "extra": {
+      "name": "EURC",
+      "version": "2"
+    }
+  }
+}
+```
+
+Key code locations:
+- `src/network.rs:950` - EURC_BASE uses `name: "EURC"`
+- `src/network.rs:925` - EURC_ETHEREUM uses `name: "Euro Coin"`
+- `src/chain/evm.rs:assert_domain()` - Domain resolution logic
+
 ### RPC timeouts
 - Use premium RPC endpoints (QuickNode, Alchemy)
 - Set `QUICKNODE_BASE_RPC` in `.env`
@@ -524,6 +556,7 @@ This complete checklist covers:
 
 ### Important Notes
 
+- **NEVER compile or deploy the facilitator automatically** - The user will compile and deploy manually. Make code changes, inform the user, and wait for them to build/deploy.
 - **Never add emojis to Rust code** - it will break compilation
 - **Rust Edition**: Currently using **edition 2021** for compatibility with Rust 1.82
   - Upstream uses edition 2024 (requires Rust 1.86+)
