@@ -689,6 +689,36 @@
             font-size: 0.875rem;
         }
 
+        .endpoint-group {
+            margin-bottom: 2rem;
+        }
+
+        .endpoint-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .endpoint-group h4 {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .endpoint-group h4::before {
+            content: '';
+            width: 4px;
+            height: 16px;
+            background: linear-gradient(135deg, var(--accent), var(--base-blue));
+            border-radius: 2px;
+        }
+
         /* Interactive stats */
         .stats {
             display: grid;
@@ -1758,38 +1788,75 @@ result = <span class="code-function">verify_payment</span>(
 
             <section class="endpoints fade-in">
                 <h3 data-i18n="endpoints.title">API Endpoints</h3>
-                <div class="endpoint">
-                    <span class="method get">GET</span>
-                    <span class="endpoint-path">/health</span>
-                    <span class="endpoint-desc" data-i18n="endpoints.health">Check facilitator health status</span>
+
+                <!-- Status & Info -->
+                <div class="endpoint-group">
+                    <h4 data-i18n="endpoints.group.status">Status & Info</h4>
+                    <div class="endpoint">
+                        <span class="method get">GET</span>
+                        <span class="endpoint-path">/health</span>
+                        <span class="endpoint-desc" data-i18n="endpoints.health">Health check status</span>
+                    </div>
+                    <div class="endpoint">
+                        <span class="method get">GET</span>
+                        <span class="endpoint-path">/version</span>
+                        <span class="endpoint-desc" data-i18n="endpoints.version">Facilitator version info</span>
+                    </div>
+                    <div class="endpoint">
+                        <span class="method get">GET</span>
+                        <span class="endpoint-path">/supported</span>
+                        <span class="endpoint-desc" data-i18n="endpoints.supported">Supported networks and payment schemes</span>
+                    </div>
                 </div>
-                <div class="endpoint">
-                    <span class="method get">GET</span>
-                    <span class="endpoint-path">/supported</span>
-                    <span class="endpoint-desc" data-i18n="endpoints.supported">List supported payment schemes and
-                        networks</span>
+
+                <!-- Core Protocol -->
+                <div class="endpoint-group">
+                    <h4 data-i18n="endpoints.group.protocol">x402 Protocol</h4>
+                    <div class="endpoint">
+                        <span class="method get">GET</span>
+                        <span class="endpoint-path">/verify</span>
+                        <span class="endpoint-desc" data-i18n="endpoints.verifySchema">Verification request schema</span>
+                    </div>
+                    <div class="endpoint">
+                        <span class="method post">POST</span>
+                        <span class="endpoint-path">/verify</span>
+                        <span class="endpoint-desc" data-i18n="endpoints.verify">Verify payment signature and requirements</span>
+                    </div>
+                    <div class="endpoint">
+                        <span class="method get">GET</span>
+                        <span class="endpoint-path">/settle</span>
+                        <span class="endpoint-desc" data-i18n="endpoints.settleSchema">Settlement request schema</span>
+                    </div>
+                    <div class="endpoint">
+                        <span class="method post">POST</span>
+                        <span class="endpoint-path">/settle</span>
+                        <span class="endpoint-desc" data-i18n="endpoints.settle">Execute payment on-chain via EIP-3009</span>
+                    </div>
                 </div>
-                <div class="endpoint">
-                    <span class="method post">POST</span>
-                    <span class="endpoint-path">/verify</span>
-                    <span class="endpoint-desc" data-i18n="endpoints.verify">Verify payment signature and
-                        requirements</span>
+
+                <!-- Compliance -->
+                <div class="endpoint-group">
+                    <h4 data-i18n="endpoints.group.compliance">Compliance</h4>
+                    <div class="endpoint">
+                        <span class="method get">GET</span>
+                        <span class="endpoint-path">/blacklist</span>
+                        <span class="endpoint-desc" data-i18n="endpoints.blacklist">OFAC sanctioned and blocked addresses</span>
+                    </div>
                 </div>
-                <div class="endpoint">
-                    <span class="method post">POST</span>
-                    <span class="endpoint-path">/settle</span>
-                    <span class="endpoint-desc" data-i18n="endpoints.settle">Execute payment on-chain via
-                        EIP-3009</span>
-                </div>
-                <div class="endpoint">
-                    <span class="method get">GET</span>
-                    <span class="endpoint-path">/discovery/resources</span>
-                    <span class="endpoint-desc" data-i18n="endpoints.discovery">Discover registered paid APIs and services</span>
-                </div>
-                <div class="endpoint">
-                    <span class="method post">POST</span>
-                    <span class="endpoint-path">/discovery/register</span>
-                    <span class="endpoint-desc" data-i18n="endpoints.register">Register a new paid endpoint in the Bazaar</span>
+
+                <!-- Discovery / Bazaar -->
+                <div class="endpoint-group">
+                    <h4 data-i18n="endpoints.group.discovery">Discovery (Bazaar)</h4>
+                    <div class="endpoint">
+                        <span class="method get">GET</span>
+                        <span class="endpoint-path">/discovery/resources</span>
+                        <span class="endpoint-desc" data-i18n="endpoints.discovery">List registered paid APIs and services</span>
+                    </div>
+                    <div class="endpoint">
+                        <span class="method post">POST</span>
+                        <span class="endpoint-path">/discovery/register</span>
+                        <span class="endpoint-desc" data-i18n="endpoints.register">Register a paid endpoint in the Bazaar</span>
+                    </div>
                 </div>
             </section>
         </main>
@@ -1834,10 +1901,18 @@ result = <span class="code-function">verify_payment</span>(
                 "what.title": "What is x402?",
                 "what.description": "x402 is a protocol for stateless, per-request payments over HTTP. Clients attach a signed payment payload to each request. The facilitator verifies it, executes the on-chain transfer, and grants access to protected resources—all without accounts, wallets, or user registration.",
                 "endpoints.title": "API Endpoints",
+                "endpoints.group.status": "Status & Info",
+                "endpoints.group.protocol": "x402 Protocol",
+                "endpoints.group.compliance": "Compliance",
+                "endpoints.group.discovery": "Discovery (Bazaar)",
                 "endpoints.health": "Check facilitator health status",
+                "endpoints.version": "Facilitator version and build info",
                 "endpoints.supported": "List supported payment schemes and networks",
+                "endpoints.verifySchema": "Get verification request schema",
                 "endpoints.verify": "Verify payment signature and requirements",
+                "endpoints.settleSchema": "Get settlement request schema",
                 "endpoints.settle": "Execute payment on-chain via EIP-3009",
+                "endpoints.blacklist": "OFAC sanctioned and blocked addresses",
                 "endpoints.discovery": "Discover registered paid APIs and services",
                 "endpoints.register": "Register a new paid endpoint in the Bazaar",
                 "footer.powered": "Powered by"
@@ -1862,10 +1937,18 @@ result = <span class="code-function">verify_payment</span>(
                 "what.title": "¿Qué es x402?",
                 "what.description": "x402 es un protocolo para pagos sin estado por solicitud sobre HTTP. Los clientes adjuntan una carga de pago firmada a cada solicitud. El facilitador la verifica, ejecuta la transferencia en cadena y otorga acceso a recursos protegidos—todo sin cuentas, billeteras o registro de usuarios.",
                 "endpoints.title": "Endpoints de la API",
+                "endpoints.group.status": "Estado e Info",
+                "endpoints.group.protocol": "Protocolo x402",
+                "endpoints.group.compliance": "Cumplimiento",
+                "endpoints.group.discovery": "Descubrimiento (Bazaar)",
                 "endpoints.health": "Verificar estado de salud del facilitador",
+                "endpoints.version": "Versión e info de compilación del facilitador",
                 "endpoints.supported": "Listar esquemas de pago y redes soportadas",
+                "endpoints.verifySchema": "Obtener esquema de solicitud de verificación",
                 "endpoints.verify": "Verificar firma de pago y requisitos",
+                "endpoints.settleSchema": "Obtener esquema de solicitud de liquidación",
                 "endpoints.settle": "Ejecutar pago en cadena vía EIP-3009",
+                "endpoints.blacklist": "Direcciones sancionadas por OFAC y bloqueadas",
                 "endpoints.discovery": "Descubrir APIs y servicios de pago registrados",
                 "endpoints.register": "Registrar un nuevo endpoint de pago en el Bazaar",
                 "footer.powered": "Desarrollado por"
