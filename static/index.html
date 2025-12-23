@@ -1781,6 +1781,16 @@ result = <span class="code-function">verify_payment</span>(
                     <span class="endpoint-desc" data-i18n="endpoints.settle">Execute payment on-chain via
                         EIP-3009</span>
                 </div>
+                <div class="endpoint">
+                    <span class="method get">GET</span>
+                    <span class="endpoint-path">/discovery/resources</span>
+                    <span class="endpoint-desc" data-i18n="endpoints.discovery">Discover registered paid APIs and services</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/discovery/register</span>
+                    <span class="endpoint-desc" data-i18n="endpoints.register">Register a new paid endpoint in the Bazaar</span>
+                </div>
             </section>
         </main>
 
@@ -1796,6 +1806,7 @@ result = <span class="code-function">verify_payment</span>(
                     <a href="https://github.com/x402-rs/x402-rs" target="_blank">GitHub</a>
                     <a href="/health" target="_blank">Status</a>
                     <a href="/supported" target="_blank">Networks</a>
+                    <a href="/discovery/resources" target="_blank">Bazaar</a>
                 </div>
             </div>
         </footer>
@@ -1827,6 +1838,8 @@ result = <span class="code-function">verify_payment</span>(
                 "endpoints.supported": "List supported payment schemes and networks",
                 "endpoints.verify": "Verify payment signature and requirements",
                 "endpoints.settle": "Execute payment on-chain via EIP-3009",
+                "endpoints.discovery": "Discover registered paid APIs and services",
+                "endpoints.register": "Register a new paid endpoint in the Bazaar",
                 "footer.powered": "Powered by"
             },
             es: {
@@ -1853,6 +1866,8 @@ result = <span class="code-function">verify_payment</span>(
                 "endpoints.supported": "Listar esquemas de pago y redes soportadas",
                 "endpoints.verify": "Verificar firma de pago y requisitos",
                 "endpoints.settle": "Ejecutar pago en cadena vía EIP-3009",
+                "endpoints.discovery": "Descubrir APIs y servicios de pago registrados",
+                "endpoints.register": "Registrar un nuevo endpoint de pago en el Bazaar",
                 "footer.powered": "Desarrollado por"
             }
         };
