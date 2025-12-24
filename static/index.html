@@ -1834,6 +1834,19 @@ result = <span class="code-function">verify_payment</span>(
                     </div>
                 </div>
 
+                <!-- x402r Escrow Extension -->
+                <div class="endpoint-group">
+                    <h4 data-i18n="endpoints.group.escrow">x402r Escrow (Refund Support)</h4>
+                    <div class="endpoint">
+                        <span class="method post">POST</span>
+                        <span class="endpoint-path">/settle</span>
+                        <span class="endpoint-desc" data-i18n="endpoints.escrowSettle">Settle to escrow proxy when "refund" extension is present</span>
+                    </div>
+                    <p style="color: var(--text-muted); font-size: 0.8rem; margin: 0.5rem 0 0 0; padding-left: 1rem;" data-i18n="endpoints.escrowNote">
+                        Add {"refund": {"window": 86400}} to extensions for trustless refund support via DepositRelay proxies.
+                    </p>
+                </div>
+
                 <!-- Compliance -->
                 <div class="endpoint-group">
                     <h4 data-i18n="endpoints.group.compliance">Compliance</h4>
@@ -1904,7 +1917,10 @@ result = <span class="code-function">verify_payment</span>(
                 "endpoints.group.status": "Status & Info",
                 "endpoints.group.protocol": "x402 Protocol",
                 "endpoints.group.compliance": "Compliance",
+                "endpoints.group.escrow": "x402r Escrow (Refund Support)",
                 "endpoints.group.discovery": "Discovery (Bazaar)",
+                "endpoints.escrowSettle": "Settle to escrow proxy when 'refund' extension is present",
+                "endpoints.escrowNote": "Add {\"refund\": {\"window\": 86400}} to extensions for trustless refund support via DepositRelay proxies.",
                 "endpoints.health": "Check facilitator health status",
                 "endpoints.version": "Facilitator version and build info",
                 "endpoints.supported": "List supported payment schemes and networks",
@@ -1940,7 +1956,10 @@ result = <span class="code-function">verify_payment</span>(
                 "endpoints.group.status": "Estado e Info",
                 "endpoints.group.protocol": "Protocolo x402",
                 "endpoints.group.compliance": "Cumplimiento",
+                "endpoints.group.escrow": "x402r Escrow (Soporte de Reembolsos)",
                 "endpoints.group.discovery": "Descubrimiento (Bazaar)",
+                "endpoints.escrowSettle": "Liquidar a proxy escrow cuando la extension 'refund' esta presente",
+                "endpoints.escrowNote": "Agrega {\"refund\": {\"window\": 86400}} a extensions para soporte de reembolsos sin confianza via proxies DepositRelay.",
                 "endpoints.health": "Verificar estado de salud del facilitador",
                 "endpoints.version": "Versión e info de compilación del facilitador",
                 "endpoints.supported": "Listar esquemas de pago y redes soportadas",
