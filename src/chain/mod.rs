@@ -5,6 +5,8 @@ use crate::chain::evm::EvmProvider;
 use crate::chain::near::NearProvider;
 use crate::chain::solana::SolanaProvider;
 use crate::chain::stellar::StellarProvider;
+#[cfg(feature = "algorand")]
+use crate::chain::algorand::AlgorandProvider;
 use crate::facilitator::Facilitator;
 use crate::network::{Network, NetworkFamily};
 use crate::types::{
@@ -12,6 +14,8 @@ use crate::types::{
     VerifyRequest, VerifyResponse,
 };
 
+#[cfg(feature = "algorand")]
+pub mod algorand;
 pub mod evm;
 pub mod near;
 pub mod solana;
@@ -22,6 +26,8 @@ pub enum NetworkProvider {
     Solana(SolanaProvider),
     Near(NearProvider),
     Stellar(StellarProvider),
+    #[cfg(feature = "algorand")]
+    Algorand(AlgorandProvider),
 }
 
 pub trait FromEnvByNetworkBuild: Sized {
@@ -50,6 +56,13 @@ impl FromEnvByNetworkBuild for NetworkProvider {
                 let provider = StellarProvider::from_env(network).await?;
                 provider.map(NetworkProvider::Stellar)
             }
+            #[cfg(feature = "algorand")]
+            NetworkFamily::Algorand => {
+                let provider = AlgorandProvider::from_env(network).await?;
+                provider.map(NetworkProvider::Algorand)
+            }
+            #[cfg(not(feature = "algorand"))]
+            NetworkFamily::Algorand => None,
         };
         Ok(provider)
     }
@@ -67,6 +80,8 @@ impl NetworkProviderOps for NetworkProvider {
             NetworkProvider::Solana(provider) => provider.signer_address(),
             NetworkProvider::Near(provider) => provider.signer_address(),
             NetworkProvider::Stellar(provider) => provider.signer_address(),
+            #[cfg(feature = "algorand")]
+            NetworkProvider::Algorand(provider) => provider.signer_address(),
         }
     }
 
@@ -76,6 +91,8 @@ impl NetworkProviderOps for NetworkProvider {
             NetworkProvider::Solana(provider) => provider.network(),
             NetworkProvider::Near(provider) => provider.network(),
             NetworkProvider::Stellar(provider) => provider.network(),
+            #[cfg(feature = "algorand")]
+            NetworkProvider::Algorand(provider) => provider.network(),
         }
     }
 }
@@ -89,6 +106,8 @@ impl Facilitator for NetworkProvider {
             NetworkProvider::Solana(provider) => provider.verify(request).await,
             NetworkProvider::Near(provider) => provider.verify(request).await,
             NetworkProvider::Stellar(provider) => provider.verify(request).await,
+            #[cfg(feature = "algorand")]
+            NetworkProvider::Algorand(provider) => provider.verify(request).await,
         }
     }
 
@@ -98,6 +117,8 @@ impl Facilitator for NetworkProvider {
             NetworkProvider::Solana(provider) => provider.settle(request).await,
             NetworkProvider::Near(provider) => provider.settle(request).await,
             NetworkProvider::Stellar(provider) => provider.settle(request).await,
+            #[cfg(feature = "algorand")]
+            NetworkProvider::Algorand(provider) => provider.settle(request).await,
         }
     }
 
@@ -107,6 +128,8 @@ impl Facilitator for NetworkProvider {
             NetworkProvider::Solana(provider) => provider.supported().await,
             NetworkProvider::Near(provider) => provider.supported().await,
             NetworkProvider::Stellar(provider) => provider.supported().await,
+            #[cfg(feature = "algorand")]
+            NetworkProvider::Algorand(provider) => provider.supported().await,
         }
     }
 }

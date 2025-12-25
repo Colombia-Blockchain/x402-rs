@@ -26,6 +26,11 @@ pub const ENV_STELLAR_PRIVATE_KEY: &str = "STELLAR_PRIVATE_KEY";
 pub const ENV_STELLAR_PRIVATE_KEY_MAINNET: &str = "STELLAR_PRIVATE_KEY_MAINNET";
 pub const ENV_STELLAR_PRIVATE_KEY_TESTNET: &str = "STELLAR_PRIVATE_KEY_TESTNET";
 
+// Algorand environment variables (25-word mnemonic)
+pub const ENV_ALGORAND_MNEMONIC: &str = "ALGORAND_MNEMONIC";
+pub const ENV_ALGORAND_MNEMONIC_MAINNET: &str = "ALGORAND_MNEMONIC_MAINNET";
+pub const ENV_ALGORAND_MNEMONIC_TESTNET: &str = "ALGORAND_MNEMONIC_TESTNET";
+
 pub const ENV_RPC_BASE: &str = "RPC_URL_BASE";
 pub const ENV_RPC_BASE_SEPOLIA: &str = "RPC_URL_BASE_SEPOLIA";
 pub const ENV_RPC_XDC: &str = "RPC_URL_XDC";
@@ -60,6 +65,10 @@ pub const ENV_RPC_STELLAR_TESTNET: &str = "RPC_URL_STELLAR_TESTNET";
 pub const ENV_RPC_FOGO: &str = "RPC_URL_FOGO";
 pub const ENV_RPC_FOGO_TESTNET: &str = "RPC_URL_FOGO_TESTNET";
 
+// Algorand RPC (Algod) URLs
+pub const ENV_RPC_ALGORAND: &str = "RPC_URL_ALGORAND";
+pub const ENV_RPC_ALGORAND_TESTNET: &str = "RPC_URL_ALGORAND_TESTNET";
+
 pub fn rpc_env_name_from_network(network: Network) -> &'static str {
     match network {
         Network::BaseSepolia => ENV_RPC_BASE_SEPOLIA,
@@ -93,6 +102,10 @@ pub fn rpc_env_name_from_network(network: Network) -> &'static str {
         Network::StellarTestnet => ENV_RPC_STELLAR_TESTNET,
         Network::Fogo => ENV_RPC_FOGO,
         Network::FogoTestnet => ENV_RPC_FOGO_TESTNET,
+        #[cfg(feature = "algorand")]
+        Network::Algorand => ENV_RPC_ALGORAND,
+        #[cfg(feature = "algorand")]
+        Network::AlgorandTestnet => ENV_RPC_ALGORAND_TESTNET,
     }
 }
 
@@ -321,6 +334,56 @@ impl SignerType {
                 }
 
                 Ok(secret_key)
+            }
+        }
+    }
+
+    /// Retrieves Algorand mnemonic from environment variables.
+    ///
+    /// Environment variables:
+    /// - `ALGORAND_MNEMONIC_MAINNET` — 25-word Algorand mnemonic for mainnet
+    /// - `ALGORAND_MNEMONIC_TESTNET` — 25-word Algorand mnemonic for testnet
+    /// - `ALGORAND_MNEMONIC` — fallback for all networks if network-specific keys are not set
+    ///
+    /// Returns the mnemonic string. Parsing into the Algorand account
+    /// is done in the AlgorandProvider to avoid adding algonaut dependency here.
+    pub fn get_algorand_mnemonic(
+        &self,
+        network: Network,
+    ) -> Result<String, Box<dyn std::error::Error>> {
+        match self {
+            SignerType::PrivateKey => {
+                let mnemonic = if network.is_testnet() {
+                    env::var(ENV_ALGORAND_MNEMONIC_TESTNET)
+                        .or_else(|_| env::var(ENV_ALGORAND_MNEMONIC))
+                        .map_err(|_| {
+                            format!(
+                                "env {} or {} not set",
+                                ENV_ALGORAND_MNEMONIC_TESTNET, ENV_ALGORAND_MNEMONIC
+                            )
+                        })?
+                } else {
+                    env::var(ENV_ALGORAND_MNEMONIC_MAINNET)
+                        .or_else(|_| env::var(ENV_ALGORAND_MNEMONIC))
+                        .map_err(|_| {
+                            format!(
+                                "env {} or {} not set",
+                                ENV_ALGORAND_MNEMONIC_MAINNET, ENV_ALGORAND_MNEMONIC
+                            )
+                        })?
+                };
+
+                // Basic validation: Algorand mnemonics are 25 words
+                let word_count = mnemonic.split_whitespace().count();
+                if word_count != 25 {
+                    return Err(format!(
+                        "Invalid Algorand mnemonic: expected 25 words, got {}",
+                        word_count
+                    )
+                    .into());
+                }
+
+                Ok(mnemonic)
             }
         }
     }

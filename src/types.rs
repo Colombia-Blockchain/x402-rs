@@ -504,6 +504,21 @@ pub struct ExactStellarPayload {
     pub signature_expiration_ledger: u32,
 }
 
+/// Payload for Algorand payments using atomic transaction groups.
+/// The client signs a standard ASA transfer, and the facilitator co-signs
+/// a fee-paying transaction to enable gasless payments via fee pooling.
+#[cfg(feature = "algorand")]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExactAlgorandPayload {
+    /// Index of the payment transaction within the atomic group (typically 1).
+    pub payment_index: usize,
+    /// Array of base64-encoded msgpack transactions forming the atomic group.
+    /// Usually: [unsigned_fee_tx, signed_asa_transfer]
+    /// The facilitator will sign payment_group[0] and submit the entire group.
+    pub payment_group: Vec<String>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum ExactPaymentPayload {
@@ -511,6 +526,8 @@ pub enum ExactPaymentPayload {
     Solana(ExactSolanaPayload),
     Near(ExactNearPayload),
     Stellar(ExactStellarPayload),
+    #[cfg(feature = "algorand")]
+    Algorand(ExactAlgorandPayload),
 }
 
 /// Describes a signed request to transfer a specific amount of funds on-chain.
@@ -873,6 +890,8 @@ pub enum MixedAddress {
     Near(String),
     /// Stellar contract ID (C...) or account ID (G...)
     Stellar(String),
+    /// Algorand address (58-character base32-encoded)
+    Algorand(String),
 }
 
 #[macro_export]
@@ -913,6 +932,7 @@ impl TryFrom<MixedAddress> for alloy::primitives::Address {
             MixedAddress::Solana(_) => Err(MixedAddressError::NotEvmAddress),
             MixedAddress::Near(_) => Err(MixedAddressError::NotEvmAddress),
             MixedAddress::Stellar(_) => Err(MixedAddressError::NotEvmAddress),
+            MixedAddress::Algorand(_) => Err(MixedAddressError::NotEvmAddress),
         }
     }
 }
@@ -940,6 +960,7 @@ impl TryInto<EvmAddress> for MixedAddress {
             MixedAddress::Offchain(_) => Err(MixedAddressError::NotEvmAddress),
             MixedAddress::Solana(_) => Err(MixedAddressError::NotEvmAddress),
             MixedAddress::Near(_) => Err(MixedAddressError::NotEvmAddress),
+            MixedAddress::Algorand(_) => Err(MixedAddressError::NotEvmAddress),
             MixedAddress::Stellar(_) => Err(MixedAddressError::NotEvmAddress),
         }
     }
@@ -953,6 +974,7 @@ impl Display for MixedAddress {
             MixedAddress::Solana(pubkey) => write!(f, "{pubkey}"),
             MixedAddress::Near(account_id) => write!(f, "{account_id}"),
             MixedAddress::Stellar(address) => write!(f, "{address}"),
+            MixedAddress::Algorand(address) => write!(f, "{address}"),
         }
     }
 }
@@ -978,6 +1000,11 @@ impl<'de> Deserialize<'de> for MixedAddress {
             Regex::new(r"^[GC][A-Z2-7]{55}$").expect("Invalid regex for Stellar address")
         });
 
+        // Algorand address regex: 58-character base32 (uppercase letters A-Z, digits 2-7)
+        static ALGORAND_ADDRESS_REGEX: Lazy<Regex> = Lazy::new(|| {
+            Regex::new(r"^[A-Z2-7]{58}$").expect("Invalid regex for Algorand address")
+        });
+
         let s = String::deserialize(deserializer)?;
         // 1) EVM address (e.g., 0x... 20 bytes, hex)
         if let Ok(addr) = EvmAddress::from_str(&s) {
@@ -995,7 +1022,11 @@ impl<'de> Deserialize<'de> for MixedAddress {
         if STELLAR_ADDRESS_REGEX.is_match(&s) {
             return Ok(MixedAddress::Stellar(s));
         }
-        // 5) Off-chain address by regex
+        // 5) Algorand address (58 chars base32)
+        if ALGORAND_ADDRESS_REGEX.is_match(&s) {
+            return Ok(MixedAddress::Algorand(s));
+        }
+        // 6) Off-chain address by regex
         if OFFCHAIN_ADDRESS_REGEX.is_match(&s) {
             return Ok(MixedAddress::Offchain(s));
         }
@@ -1014,6 +1045,7 @@ impl Serialize for MixedAddress {
             MixedAddress::Solana(pubkey) => serializer.serialize_str(pubkey.to_string().as_str()),
             MixedAddress::Near(account_id) => serializer.serialize_str(account_id),
             MixedAddress::Stellar(address) => serializer.serialize_str(address),
+            MixedAddress::Algorand(address) => serializer.serialize_str(address),
         }
     }
 }
@@ -1027,6 +1059,8 @@ pub enum TransactionHash {
     Near([u8; 32]),
     /// A 32-byte Stellar transaction hash, encoded as 64-character hex string.
     Stellar([u8; 32]),
+    /// A 52-character Algorand transaction ID, encoded as base32.
+    Algorand(String),
 }
 
 impl<'de> Deserialize<'de> for TransactionHash {
@@ -1072,6 +1106,14 @@ impl<'de> Deserialize<'de> for TransactionHash {
             }
         }
 
+        // Algorand: 52-character base32 string (uppercase letters A-Z and digits 2-7)
+        static ALGORAND_TX_ID_REGEX: Lazy<Regex> =
+            Lazy::new(|| Regex::new(r"^[A-Z2-7]{52}$").expect("invalid regex"));
+
+        if ALGORAND_TX_ID_REGEX.is_match(&s) {
+            return Ok(TransactionHash::Algorand(s));
+        }
+
         Err(serde::de::Error::custom("Invalid transaction hash format"))
     }
 }
@@ -1095,6 +1137,10 @@ impl Serialize for TransactionHash {
                 // Stellar uses hex encoding without 0x prefix
                 serializer.serialize_str(&hex::encode(bytes))
             }
+            TransactionHash::Algorand(tx_id) => {
+                // Algorand uses base32 string directly
+                serializer.serialize_str(tx_id)
+            }
         }
     }
 }
@@ -1113,6 +1159,9 @@ impl Display for TransactionHash {
             }
             TransactionHash::Stellar(bytes) => {
                 write!(f, "{}", hex::encode(bytes))
+            }
+            TransactionHash::Algorand(tx_id) => {
+                write!(f, "{}", tx_id)
             }
         }
     }

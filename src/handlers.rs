@@ -1200,6 +1200,18 @@ where
                 stellar_payload.amount
             );
         }
+        #[cfg(feature = "algorand")]
+        crate::types::ExactPaymentPayload::Algorand(algorand_payload) => {
+            debug!("  - payload type: Algorand");
+            debug!(
+                "  - payment_index: {}",
+                algorand_payload.payment_index
+            );
+            debug!(
+                "  - payment_group.len: {}",
+                algorand_payload.payment_group.len()
+            );
+        }
     }
 
     debug!("=== END SETTLE REQUEST DEBUG ===");
