@@ -397,6 +397,9 @@ impl Network {
             // Fogo
             "fogo:mainnet" => Some(Network::Fogo),
             "fogo:testnet" => Some(Network::FogoTestnet),
+            // Algorand
+            "algorand:mainnet" => Some(Network::Algorand),
+            "algorand:testnet" => Some(Network::AlgorandTestnet),
             _ => None,
         }
     }
@@ -857,6 +860,34 @@ static USDC_FOGO_TESTNET: Lazy<USDCDeployment> = Lazy::new(|| {
     })
 });
 
+/// Lazily initialized known USDC deployment on Algorand mainnet as [`USDCDeployment`].
+/// Note: Algorand uses Asset IDs (ASA IDs) instead of contract addresses.
+/// USDC ASA ID on mainnet: 31566704
+static USDC_ALGORAND: Lazy<USDCDeployment> = Lazy::new(|| {
+    USDCDeployment(TokenDeployment {
+        asset: TokenAsset {
+            address: MixedAddress::Algorand("31566704".to_string()),
+            network: Network::Algorand,
+        },
+        decimals: 6,
+        eip712: None, // Algorand uses atomic transactions, not EIP-712
+    })
+});
+
+/// Lazily initialized known USDC deployment on Algorand testnet as [`USDCDeployment`].
+/// Note: Algorand uses Asset IDs (ASA IDs) instead of contract addresses.
+/// USDC ASA ID on testnet: 10458941
+static USDC_ALGORAND_TESTNET: Lazy<USDCDeployment> = Lazy::new(|| {
+    USDCDeployment(TokenDeployment {
+        asset: TokenAsset {
+            address: MixedAddress::Algorand("10458941".to_string()),
+            network: Network::AlgorandTestnet,
+        },
+        decimals: 6,
+        eip712: None, // Algorand uses atomic transactions, not EIP-712
+    })
+});
+
 /// A known USDC deployment as a wrapper around [`TokenDeployment`].
 #[derive(Clone, Debug)]
 pub struct USDCDeployment(pub TokenDeployment);
@@ -924,6 +955,8 @@ impl USDCDeployment {
             Network::StellarTestnet => &USDC_STELLAR_TESTNET,
             Network::Fogo => &USDC_FOGO,
             Network::FogoTestnet => &USDC_FOGO_TESTNET,
+            Network::Algorand => &USDC_ALGORAND,
+            Network::AlgorandTestnet => &USDC_ALGORAND_TESTNET,
         }
     }
 }

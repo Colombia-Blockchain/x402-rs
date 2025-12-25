@@ -59,6 +59,14 @@ stellar-strkey = { version = "0.0.10" }  # Stellar address encoding/decoding
 stellar-xdr = { version = "=21.2.0", default-features = false, features = ["std", "curr"] }  # Stellar XDR types
 sha2 = { version = "0.10" }  # SHA-256 for Stellar signature hashing
 
+# Algorand (atomic transaction groups for gasless payments)
+algonaut_client = { version = "0.4", optional = true }  # Algorand RPC client
+algonaut_core = { version = "0.4", optional = true }    # Core Algorand types
+algonaut_transaction = { version = "0.4", optional = true }  # Transaction building
+algonaut_crypto = { version = "0.4", optional = true }  # Signing and verification
+data-encoding = { version = "2.6", optional = true }    # Base32 for Algorand addresses
+rmp-serde = { version = "1.3", optional = true }        # MessagePack for Algorand txns
+
 # AWS SDK (for Bazaar discovery persistence)
 aws-config = { version = "1.5" }
 aws-sdk-s3 = { version = "1.65" }
@@ -79,6 +87,7 @@ telemetry = []
 solana = ["x402-compliance/solana"]
 near = []
 stellar = []
+algorand = ["algonaut_client", "algonaut_core", "algonaut_transaction", "algonaut_crypto", "data-encoding", "rmp-serde"]
 
 [workspace]
 members = [
