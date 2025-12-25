@@ -507,6 +507,7 @@ pub struct ExactStellarPayload {
 /// Payload for Algorand payments using atomic transaction groups.
 /// The client signs a standard ASA transfer, and the facilitator co-signs
 /// a fee-paying transaction to enable gasless payments via fee pooling.
+#[cfg(feature = "algorand")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ExactAlgorandPayload {
@@ -525,6 +526,7 @@ pub enum ExactPaymentPayload {
     Solana(ExactSolanaPayload),
     Near(ExactNearPayload),
     Stellar(ExactStellarPayload),
+    #[cfg(feature = "algorand")]
     Algorand(ExactAlgorandPayload),
 }
 

@@ -102,7 +102,9 @@ pub fn rpc_env_name_from_network(network: Network) -> &'static str {
         Network::StellarTestnet => ENV_RPC_STELLAR_TESTNET,
         Network::Fogo => ENV_RPC_FOGO,
         Network::FogoTestnet => ENV_RPC_FOGO_TESTNET,
+        #[cfg(feature = "algorand")]
         Network::Algorand => ENV_RPC_ALGORAND,
+        #[cfg(feature = "algorand")]
         Network::AlgorandTestnet => ENV_RPC_ALGORAND_TESTNET,
     }
 }

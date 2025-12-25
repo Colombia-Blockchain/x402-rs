@@ -19,15 +19,15 @@
 #![cfg(feature = "algorand")]
 
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
-use serde::{Deserialize, Serialize};
 use std::fmt::{Debug, Formatter};
+use std::str::FromStr;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-use algonaut_client::algod::v2::Algod;
-use algonaut_core::{Address as AlgoAddress, MicroAlgos, Round, SignedTransaction, Transaction as AlgoTransaction};
-use algonaut_crypto::ed25519::Ed25519SecretKey;
-use algonaut_transaction::account::Account;
+use algonaut::algod::v2::Algod;
+use algonaut::core::Address as AlgoAddress;
+use algonaut::transaction::account::Account;
+use algonaut::transaction::{SignedTransaction, Transaction as AlgoTransaction, TransactionType};
 
 use crate::chain::{FacilitatorLocalError, FromEnvByNetworkBuild, NetworkProviderOps};
 use crate::facilitator::Facilitator;
@@ -100,6 +100,18 @@ pub enum AlgorandError {
 
     #[error("Payment index out of bounds: {index} >= {len}")]
     PaymentIndexOutOfBounds { index: usize, len: usize },
+
+    #[error("Transaction type mismatch: expected asset transfer")]
+    TransactionTypeMismatch,
+
+    #[error("Transaction simulation failed: {0}")]
+    SimulationFailed(String),
+
+    #[error("Payment transaction missing lease field for replay protection")]
+    MissingLease,
+
+    #[error("Lease mismatch: expected {expected}, got {actual}")]
+    LeaseMismatch { expected: String, actual: String },
 }
 
 impl From<AlgorandError> for FacilitatorLocalError {
@@ -172,12 +184,12 @@ impl AlgorandAddress {
             return false;
         }
         // Try to parse as Algorand address
-        AlgoAddress::from_string(&self.address).is_ok()
+        AlgoAddress::from_str(&self.address).is_ok()
     }
 
     /// Convert to algonaut Address type
     pub fn to_algo_address(&self) -> Result<AlgoAddress, AlgorandError> {
-        AlgoAddress::from_string(&self.address)
+        AlgoAddress::from_str(&self.address)
             .map_err(|e| AlgorandError::InvalidEncoding(format!("Invalid address: {}", e)))
     }
 }
@@ -234,6 +246,10 @@ pub struct AlgorandProvider {
     public_address: String,
     /// Algod client for RPC calls
     algod: Arc<Algod>,
+    /// Algod URL for simulation API calls (not wrapped by algonaut)
+    algod_url: String,
+    /// HTTP client for simulation requests
+    http_client: reqwest::Client,
     /// Network configuration
     chain: AlgorandChain,
     /// Nonce store for replay protection (group_id -> confirmation_round)
@@ -281,10 +297,15 @@ impl AlgorandProvider {
             "Initialized Algorand provider"
         );
 
+        // Create HTTP client for simulation API calls
+        let http_client = reqwest::Client::new();
+
         Ok(Self {
             account: Arc::new(account),
             public_address,
             algod: Arc::new(algod),
+            algod_url: effective_url.to_string(),
+            http_client,
             chain,
             nonce_store: Arc::new(RwLock::new(std::collections::HashMap::new())),
         })
@@ -307,7 +328,10 @@ impl AlgorandProvider {
     }
 
     /// Decode a base64 msgpack signed transaction
-    fn decode_signed_transaction(&self, base64_tx: &str) -> Result<SignedTransaction, AlgorandError> {
+    fn decode_signed_transaction(
+        &self,
+        base64_tx: &str,
+    ) -> Result<SignedTransaction, AlgorandError> {
         let bytes = BASE64
             .decode(base64_tx)
             .map_err(|e| AlgorandError::InvalidEncoding(format!("Base64 decode failed: {}", e)))?;
@@ -322,25 +346,36 @@ impl AlgorandProvider {
     /// - Draining the facilitator's funds (close_remainder_to)
     /// - Taking over the facilitator's account (rekey_to)
     fn validate_fee_transaction(&self, tx: &AlgoTransaction) -> Result<(), AlgorandError> {
-        // Check for forbidden fields that could compromise the facilitator
-
-        // close_remainder_to would send remaining funds to attacker
-        if tx.close_remainder_to.is_some() {
-            return Err(AlgorandError::ForbiddenFeeField {
-                field: "close_remainder_to".to_string(),
-            });
-        }
-
-        // rekey_to would give control of facilitator account to attacker
+        // Check for rekey_to which would give control of facilitator account to attacker
         if tx.rekey_to.is_some() {
             return Err(AlgorandError::ForbiddenFeeField {
                 field: "rekey_to".to_string(),
             });
         }
 
-        // asset_close_to would send ASA balance to attacker
-        // (Note: fee tx should be a payment, not asset transfer, but check anyway)
-        // This is checked in the asset transfer type
+        // Check the transaction type for forbidden fields
+        match &tx.txn_type {
+            TransactionType::Payment(payment) => {
+                // close_remainder_to would send remaining funds to attacker
+                if payment.close_remainder_to.is_some() {
+                    return Err(AlgorandError::ForbiddenFeeField {
+                        field: "close_remainder_to".to_string(),
+                    });
+                }
+            }
+            TransactionType::AssetTransferTransaction(xfer) => {
+                // asset_close_to would send ASA balance to attacker
+                if xfer.close_to.is_some() {
+                    return Err(AlgorandError::ForbiddenFeeField {
+                        field: "close_to".to_string(),
+                    });
+                }
+            }
+            _ => {
+                // For other transaction types, we don't have specific forbidden fields
+                // but we should be cautious
+            }
+        }
 
         Ok(())
     }
@@ -370,32 +405,60 @@ impl AlgorandProvider {
         self.validate_fee_transaction(&fee_tx)?;
 
         // Decode the payment transaction (signed by client)
-        let payment_signed = self.decode_signed_transaction(&payload.payment_group[payload.payment_index])?;
+        let payment_signed =
+            self.decode_signed_transaction(&payload.payment_group[payload.payment_index])?;
 
         // Verify group IDs match
         let fee_group_id = fee_tx.group.ok_or(AlgorandError::InvalidGroupId)?;
-        let payment_group_id = payment_signed.transaction.group.ok_or(AlgorandError::InvalidGroupId)?;
+        let payment_group_id = payment_signed
+            .transaction
+            .group
+            .ok_or(AlgorandError::InvalidGroupId)?;
 
-        if fee_group_id != payment_group_id {
+        if fee_group_id.0 != payment_group_id.0 {
             return Err(AlgorandError::InvalidAtomicGroup(
                 "Group IDs do not match".to_string(),
             ));
         }
 
-        // Verify the payment is an asset transfer
-        let asset_transfer = payment_signed
-            .transaction
-            .asset_transfer_transaction
-            .as_ref()
-            .ok_or_else(|| {
-                AlgorandError::InvalidAtomicGroup("Payment must be an asset transfer".to_string())
-            })?;
+        // Verify lease field is present for replay protection
+        // The lease should be SHA-256(paymentRequirements) as per GoPlausible x402-avm spec
+        // This provides additional replay protection beyond group_id tracking
+        match &payment_signed.transaction.lease {
+            Some(lease) => {
+                tracing::debug!(
+                    lease = BASE64.encode(&lease.0),
+                    "Payment transaction has lease field set"
+                );
+            }
+            None => {
+                // Warn but don't fail - client may not support lease yet
+                // TODO: Make this an error once all clients implement lease support
+                tracing::warn!(
+                    "Payment transaction missing lease field - \
+                     replay protection relies only on group_id tracking. \
+                     Clients should set lease = SHA256(paymentRequirements) for security."
+                );
+            }
+        }
+
+        // Verify the payment is an asset transfer and get details
+        let (asset_id, amount, receiver, sender) = match &payment_signed.transaction.txn_type {
+            TransactionType::AssetTransferTransaction(xfer) => {
+                (xfer.xfer, xfer.amount, xfer.receiver.clone(), xfer.sender.clone())
+            }
+            _ => {
+                return Err(AlgorandError::InvalidAtomicGroup(
+                    "Payment must be an asset transfer".to_string(),
+                ));
+            }
+        };
 
         // Verify it's USDC
-        if asset_transfer.xfer != self.chain.usdc_asa_id {
+        if asset_id != self.chain.usdc_asa_id {
             return Err(AlgorandError::AsaIdMismatch {
                 expected: self.chain.usdc_asa_id,
-                actual: asset_transfer.xfer,
+                actual: asset_id,
             });
         }
 
@@ -408,25 +471,25 @@ impl AlgorandProvider {
         let current_round = status.last_round;
 
         // Check transaction validity window
-        if let Some(last_valid) = payment_signed.transaction.last_valid {
-            if last_valid.0 < current_round {
-                return Err(AlgorandError::TransactionExpired {
-                    expiry_round: last_valid.0,
-                    current_round,
-                });
-            }
+        // last_valid is a Round (not Option), check if it's expired
+        let last_valid_round = payment_signed.transaction.last_valid.0;
+        if last_valid_round < current_round {
+            return Err(AlgorandError::TransactionExpired {
+                expiry_round: last_valid_round,
+                current_round,
+            });
         }
 
         // Extract payer address
-        let payer_address = payment_signed.transaction.sender.to_string();
+        let payer_address = sender.to_string();
 
         Ok(VerifyGroupResult {
             payer: AlgorandAddress::new(payer_address),
             fee_tx,
             payment_signed,
             group_id: fee_group_id.0,
-            amount: asset_transfer.amount,
-            recipient: asset_transfer.receiver.to_string(),
+            amount,
+            recipient: receiver.to_string(),
             current_round,
         })
     }
@@ -440,7 +503,7 @@ impl AlgorandProvider {
         // Sign the fee transaction
         let signed_fee = self
             .account
-            .sign_transaction(&verification.fee_tx)
+            .sign_transaction(verification.fee_tx.clone())
             .map_err(|e| AlgorandError::InvalidEncoding(format!("Failed to sign fee tx: {}", e)))?;
 
         // Build the complete signed group
@@ -457,10 +520,18 @@ impl AlgorandProvider {
             }
         }
 
+        // Simulate the transaction group before broadcasting
+        // This is step 6 in the GoPlausible x402-avm verification flow
+        tracing::info!(
+            group_size = signed_group.len(),
+            "Simulating Algorand transaction group before submission"
+        );
+        self.simulate_group(&signed_group).await?;
+
         // Submit the atomic group
         let pending_tx = self
             .algod
-            .send_transactions(&signed_group)
+            .broadcast_signed_transactions(&signed_group)
             .await
             .map_err(|e| AlgorandError::SubmissionFailed(e.to_string()))?;
 
@@ -523,12 +594,118 @@ impl AlgorandProvider {
             attempts: MAX_ATTEMPTS,
         })
     }
+
+    /// Simulate the transaction group before submission
+    ///
+    /// This calls the algod /v2/transactions/simulate endpoint to verify the
+    /// transaction group would succeed before actually broadcasting it.
+    /// This is step 6 in the GoPlausible x402-avm verification flow.
+    async fn simulate_group(
+        &self,
+        signed_group: &[SignedTransaction],
+    ) -> Result<(), AlgorandError> {
+        // Encode each signed transaction to msgpack then base64
+        let txn_objects: Vec<serde_json::Value> = signed_group
+            .iter()
+            .map(|stxn| {
+                let encoded = rmp_serde::to_vec_named(stxn)
+                    .map_err(|e| AlgorandError::InvalidEncoding(format!("Msgpack encode: {}", e)))?;
+                Ok(serde_json::json!({
+                    "txn": BASE64.encode(&encoded)
+                }))
+            })
+            .collect::<Result<Vec<_>, AlgorandError>>()?;
+
+        let request_body = serde_json::json!({
+            "txn-groups": [
+                {
+                    "txns": txn_objects
+                }
+            ],
+            "allow-empty-signatures": false,
+            "allow-more-logging": true
+        });
+
+        let simulate_url = format!("{}/v2/transactions/simulate", self.algod_url);
+
+        tracing::debug!(
+            url = %simulate_url,
+            group_size = signed_group.len(),
+            "Simulating Algorand transaction group"
+        );
+
+        let response = self
+            .http_client
+            .post(&simulate_url)
+            .header("Content-Type", "application/json")
+            .json(&request_body)
+            .send()
+            .await
+            .map_err(|e| AlgorandError::SimulationFailed(format!("HTTP request failed: {}", e)))?;
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let body = response.text().await.unwrap_or_default();
+            return Err(AlgorandError::SimulationFailed(format!(
+                "Simulate API returned {}: {}",
+                status, body
+            )));
+        }
+
+        let result: serde_json::Value = response
+            .json()
+            .await
+            .map_err(|e| AlgorandError::SimulationFailed(format!("JSON parse failed: {}", e)))?;
+
+        // Check if simulation passed
+        // The response contains txn-groups[0].txn-results[*].txn-result.failure-message
+        if let Some(txn_groups) = result.get("txn-groups").and_then(|g| g.as_array()) {
+            for group in txn_groups {
+                // Check group-level failure
+                if let Some(failure) = group.get("failure-message").and_then(|f| f.as_str()) {
+                    if !failure.is_empty() {
+                        return Err(AlgorandError::SimulationFailed(format!(
+                            "Group simulation failed: {}",
+                            failure
+                        )));
+                    }
+                }
+
+                // Check individual transaction results
+                if let Some(txn_results) = group.get("txn-results").and_then(|r| r.as_array()) {
+                    for (i, txn_result) in txn_results.iter().enumerate() {
+                        if let Some(failure) = txn_result
+                            .get("txn-result")
+                            .and_then(|r| r.get("failure-message"))
+                            .and_then(|f| f.as_str())
+                        {
+                            if !failure.is_empty() {
+                                return Err(AlgorandError::SimulationFailed(format!(
+                                    "Transaction {} simulation failed: {}",
+                                    i, failure
+                                )));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        tracing::info!(
+            group_size = signed_group.len(),
+            "Algorand transaction group simulation passed"
+        );
+
+        Ok(())
+    }
 }
 
 /// Result of verifying an Algorand payment group
 pub struct VerifyGroupResult {
     pub payer: AlgorandAddress,
     pub fee_tx: AlgoTransaction,
+    /// The signed payment transaction (stored for potential future use)
+    #[allow(dead_code)]
     pub payment_signed: SignedTransaction,
     pub group_id: [u8; 32],
     pub amount: u64,
@@ -687,7 +864,7 @@ mod tests {
     fn test_algorand_address_validation() {
         // Valid Algorand address (58 chars, base32)
         let valid = AlgorandAddress::new(
-            "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAY5HFKQ".to_string()
+            "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAY5HFKQ".to_string(),
         );
         assert!(valid.is_valid());
 
@@ -696,7 +873,9 @@ mod tests {
         assert!(!invalid_short.is_valid());
 
         // Invalid address - wrong characters
-        let invalid_chars = AlgorandAddress::new("0000000000000000000000000000000000000000000000000000000000".to_string());
+        let invalid_chars = AlgorandAddress::new(
+            "0000000000000000000000000000000000000000000000000000000000".to_string(),
+        );
         assert!(!invalid_chars.is_valid());
     }
 

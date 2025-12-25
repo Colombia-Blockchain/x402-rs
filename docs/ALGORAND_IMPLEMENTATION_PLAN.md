@@ -1671,3 +1671,352 @@ This implementation plan provides a complete roadmap for adding Algorand support
 2. Set up Algorand testnet environment
 3. Fund testnet wallet with ALGO and opt into testnet USDC
 4. Begin Phase 1 implementation
+
+---
+
+## Appendix C: Stablecoin Availability Research (December 2025)
+
+### Stablecoins Currently Available on Algorand
+
+| Stablecoin | Available | ASA ID (Mainnet) | ASA ID (Testnet) | Notes |
+|------------|-----------|------------------|------------------|-------|
+| **USDC** | Yes | 31566704 | 10458941 | Primary stablecoin, >$100M circulation, issued by Circle |
+| **USDT** | Yes | 312769 | 7413781 | Tether has paused new issuance but existing tokens active |
+| **EURC** | No | - | - | Only on Ethereum, Solana, Avalanche, Base, Stellar, Sonic |
+| **PYUSD** | No | - | - | Only on Ethereum, Solana, Arbitrum (PayPal/Paxos) |
+| **AUSD** | No | - | - | Only on Ethereum, Sui, Avalanche, Injective (Agora) |
+| **EURS** | Yes | TBD | TBD | STASIS Euro available on Algorand (euro stablecoin alternative) |
+
+### Key Findings
+
+1. **USDC dominates Algorand**: Over 95% of ASA stablecoin market cap on Algorand is USDC.
+
+2. **USDT active but frozen**: Tether has paused new USDT issuance on Algorand, but existing tokens (ASA ID 312769) continue to be actively used.
+
+3. **No euro stablecoins from Circle**: EURC is not deployed on Algorand. For euro payments on Algorand, STASIS EURO (EURS) is an alternative.
+
+4. **No PayPal or Agora presence**: Neither PYUSD nor AUSD have been deployed to Algorand.
+
+### Implementation Recommendation
+
+For the x402-rs facilitator, support should focus on:
+- **Phase 1**: USDC only (ASA ID 31566704 mainnet, 10458941 testnet)
+- **Phase 2**: USDT support if demand exists (ASA ID 312769 mainnet, 7413781 testnet)
+- **Future**: Monitor Circle's announcements for potential EURC on Algorand
+
+### Sources
+
+- [Stablecoins on Algorand: USDC and USDT](https://community.algorand.org/blog/stablecoins-on-algorand-usdc-and-usdt/)
+- [Circle USDC on Algorand](https://www.circle.com/multi-chain-usdc/algorand)
+- [Pera Explorer - USDT ASA 312769](https://explorer.perawallet.app/asset/312769/)
+- [AlgoExplorer - USDC ASA 31566704](https://algoexplorer.io/asset/31566704)
+- [Circle EURC Supported Chains](https://www.circle.com/eurc)
+- [PayPal PYUSD Networks](https://www.paypal.com/us/digital-wallet/manage-money/crypto/pyusd)
+
+---
+
+## Appendix D: Algonaut Crate API Issues (December 2025)
+
+### Current Problem
+
+The initial implementation used algonaut crate version 0.4 with individual crates:
+- `algonaut_client`
+- `algonaut_core`
+- `algonaut_transaction`
+- `algonaut_crypto`
+
+However, the API structure differs from what was expected:
+
+### Import Path Issues
+
+| Expected | Actual |
+|----------|--------|
+| `algonaut_client::algod::v2::Algod` | Module exists but may have different struct location |
+| `algonaut_core::SignedTransaction` | Should be `algonaut_transaction::SignedTransaction` |
+| `algonaut_core::Transaction` | Should be `algonaut_transaction::Transaction` |
+| `algonaut_crypto::ed25519::Ed25519SecretKey` | Does not exist - use `Account` for signing |
+
+### Transaction Type Issues
+
+The `algonaut_transaction::Transaction` struct has different field access patterns than expected:
+- No direct `.asset_transfer_transaction` field
+- `.sender` is a method, not a field
+- No direct `.close_remainder_to` field
+
+### Recommended Fix Approach
+
+**Option 1: Use umbrella `algonaut` crate** (Recommended)
+```toml
+[dependencies]
+algonaut = "0.4"
+```
+
+This provides cleaner re-exports:
+- `algonaut::algod::v2::Algod`
+- `algonaut::transaction::Transaction`
+- `algonaut::transaction::SignedTransaction`
+- `algonaut::transaction::account::Account`
+
+**Option 2: Update to match actual API**
+Study the actual algonaut 0.4 API at https://docs.rs/algonaut/latest/algonaut/ and rewrite the algorand.rs provider to match the actual method signatures and patterns.
+
+### Next Steps for Compilation
+
+1. Update Cargo.toml to use umbrella `algonaut` crate instead of individual crates
+2. Update imports in `src/chain/algorand.rs` to match actual API
+3. Rewrite transaction handling code to use correct API patterns
+4. Consider studying https://github.com/manuelmauro/algonaut examples for correct usage patterns
+
+### Alternative: Consider algod REST API
+
+If algonaut crate issues persist, consider using raw REST API calls with `reqwest`:
+- Simpler but more boilerplate
+- Full control over request/response handling
+- No crate version compatibility issues
+
+---
+
+## Appendix E: GoPlausible x402-avm Reference Implementation (December 2025)
+
+GoPlausible has released an open-source x402 implementation for Algorand at:
+- **Repository**: https://github.com/GoPlausible/x402-avm (branch: `branch-pr-361`)
+- **Demo**: https://x402.goplausible.xyz/protected
+- **NPM Packages**: `x402-avm`, `x402-axios-avm`, `x402-express-avm`, `x402-hono-avm`, `x402-next-avm`
+
+### Network Naming Convention
+
+GoPlausible uses these network strings (different from our current implementation):
+- `algorand-mainnet` (we use `algorand`)
+- `algorand-testnet` (we use `algorand-testnet` - matches!)
+
+**Recommendation**: Update our Network enum to use `algorand-mainnet` for consistency with the ecosystem.
+
+### Default RPC Endpoints (AlgoNode - Free Public)
+
+```typescript
+DEFAULT_ALGOD_ENDPOINTS = {
+  "algorand-mainnet": "https://mainnet-api.algonode.cloud",
+  "algorand-testnet": "https://testnet-api.algonode.cloud"
+}
+```
+
+These match our current constants in `src/chain/algorand.rs`.
+
+### Payload Structure (X-PAYMENT Header)
+
+The GoPlausible implementation uses this exact structure:
+
+```json
+{
+  "x402Version": 1,
+  "scheme": "exact",
+  "network": "algorand-mainnet",
+  "payload": {
+    "paymentIndex": 1,
+    "paymentGroup": [
+      "base64-encoded-fee-tx-unsigned",
+      "base64-encoded-payment-tx-signed"
+    ]
+  }
+}
+```
+
+**Key differences from our current implementation**:
+1. `paymentIndex` identifies which transaction in the group is the payment (we have this)
+2. `paymentGroup` is an array of base64-encoded msgpack transactions (we have this)
+3. Fee transaction at index 0 is UNSIGNED (facilitator signs it)
+4. Payment transaction at `paymentIndex` is SIGNED by client
+
+### PaymentRequirements Structure
+
+```json
+{
+  "scheme": "exact",
+  "network": "algorand-mainnet",
+  "maxAmountRequired": "5000000",
+  "resource": "https://example.net/signup",
+  "description": "$5 registration payment",
+  "mimeType": "text/html",
+  "payTo": "RESOURCESERVERADDRESS...",
+  "maxTimeoutSeconds": 60,
+  "asset": "31566704",
+  "extra": {
+    "feePayer": "FACILITATORADDRESS..."
+  }
+}
+```
+
+**Important**: `asset` is a string containing the ASA ID (not an address like EVM).
+
+### X-PAYMENT-RESPONSE Structure
+
+```json
+{
+  "success": true,
+  "error": null,
+  "txHash": "NTRZR6HGMMZGYMJKUNVNLKLA427ACAVIPFNC6JHA5XNBQQHW7MWA",
+  "networkId": "algorand-mainnet"
+}
+```
+
+### Transaction Group Constraints
+
+From the spec (`scheme_exact_avm.md`):
+- Maximum 16 transactions per atomic group
+- Supports both `pay` (ALGO) and `axfer` (ASA) transaction types
+- Fee payer transactions must be type `pay` only
+- Fee payer transactions must NOT have: `close`, `rekey`, or `amt` fields
+- Lease field derived from `SHA-256(paymentRequirements)` for replay protection
+
+### 7-Step Verification Process
+
+1. **Group Size Validation**: Check `paymentGroup` contains ≤16 elements
+2. **Transaction Decoding**: Decode all transactions (msgpack → base64 decode)
+3. **Payment Transaction Validation**:
+   - Asset amount (`aamt`) matches `maxAmountRequired`
+   - Asset receiver (`arcv`) matches `payTo`
+4. **Fee Payer Validation** (if specified in `extra.feePayer`):
+   - Must be `pay` type
+   - Must not have `close`, `rekey`, `amt` fields
+   - Fee must be reasonable (≥1000 microAlgos)
+5. **Round Validity**: Transaction valid for current blockchain round
+6. **ASA Opt-in Check**: Verify recipient is opted into the ASA
+7. **Simulation**: Submit group to Algorand `simulate` endpoint before settlement
+
+### Settlement Process
+
+1. Invoke `verify()` to validate payload
+2. Sign fee payer transaction with facilitator wallet
+3. Submit atomic group via `sendRawTransaction()`
+4. Handle "overlapping lease" errors (indicates duplicate payment)
+5. Return transaction ID
+
+### Key Constants from GoPlausible
+
+```typescript
+// Transaction fees
+const STANDARD_FEE = 1000;      // microAlgos per transaction
+const FEE_PAYER_FEE = 2000;     // Covers both txns in group
+
+// Validity window
+const VALIDITY_WINDOW = 1000;   // ~1 hour in rounds
+
+// ASA IDs
+const USDC_MAINNET = 31566704;
+const USDC_TESTNET = 10458941;
+```
+
+### Wallet/Signer Creation
+
+```typescript
+// From mnemonic (25 words)
+const account = algosdk.mnemonicToSecretKey(mnemonic);
+
+// Or from hex secret key
+const sk = Buffer.from(hexKey, 'hex');
+const account = algosdk.mnemonicToSecretKey(algosdk.secretKeyToMnemonic(sk));
+```
+
+### Client-Side Transaction Group Building
+
+GoPlausible's `X402TransactionGroupBuilder` class:
+
+```typescript
+class X402TransactionGroupBuilder {
+  addX402Payment(sender, recipient, amount, assetId?) {
+    // Creates pay or axfer transaction with flatFee: true
+  }
+
+  addX402FeePayment(feePayer) {
+    // Creates zero-amount self-transfer carrying fee burden
+  }
+
+  buildGroup() {
+    // Assigns shared group ID, returns { paymentIndex, paymentGroup[] }
+  }
+}
+```
+
+### Changes Required for Compatibility
+
+To be compatible with GoPlausible's ecosystem:
+
+1. **Network naming**: Change `algorand` → `algorand-mainnet` in Network enum
+2. **Add simulation step**: Call Algorand's `simulate` endpoint before settlement
+3. **Lease field**: Consider using `SHA-256(paymentRequirements)` for replay protection
+4. **Fee payer validation**: Add stricter checks (no close/rekey/amt)
+5. **Response format**: Ensure `networkId` field uses `algorand-mainnet` format
+
+### Compatibility Notes
+
+Our current implementation in `src/chain/algorand.rs` is largely compatible with GoPlausible's approach:
+- Same atomic group structure ✓
+- Same `paymentIndex` and `paymentGroup` fields ✓
+- Same USDC ASA IDs ✓
+- Same default RPC endpoints ✓
+
+**Differences to address**:
+- Network naming convention (`algorand` vs `algorand-mainnet`)
+- Missing simulation step before settlement
+- Fee payer validation could be stricter
+
+### Demo Testing
+
+GoPlausible's demo at https://x402.goplausible.xyz/protected:
+- Requires 0.01 USDC (ASA 10458941) on Algorand Testnet
+- Uses Pera Wallet for signing
+- Testnet USDC faucet available via linked page
+
+**Alternative Demo URL**: https://x402-avm.vercel.app/protected
+
+### NPM Package Names (Official)
+
+The official npm packages from GoPlausible:
+- `x402-avm` - Core protocol implementation
+- `x402-avm-express` - Express.js middleware
+- `x402-avm-hono` - Hono framework middleware
+- `x402-avm-next` - Next.js middleware
+- `x402-avm-fetch` - Fetch API client
+- `x402-avm-axios` - Axios HTTP client
+
+### Environment Variables (GoPlausible Standard)
+
+```bash
+FACILITATOR_URL=https://facilitator.example.com
+RESOURCE_WALLET_ADDRESS=ALGORAND_ADDRESS...
+PRIVATE_KEY="25-word mnemonic phrase"
+NETWORK=algorand-testnet  # or algorand-mainnet
+ASSET=10458941  # ASA ID (0 for native ALGO)
+PRICE=10000  # In base units (0.01 USDC = 10000 micro-USDC)
+ALGOD_SERVER=https://testnet-api.algonode.cloud
+```
+
+### Lease Field for Replay Protection
+
+GoPlausible uses `SHA-256(paymentRequirements)` as the lease field:
+- Prevents transaction replay across different payment requests
+- Each unique PaymentRequirements generates a unique lease
+- Algorand enforces lease uniqueness per sender within validity window
+
+Implementation:
+```typescript
+const lease = crypto.createHash('sha256')
+  .update(JSON.stringify(paymentRequirements))
+  .digest();
+```
+
+### Fee Delegation Pattern
+
+When `extra.feePayer` is present:
+1. Main payment transaction: `fee = 0`
+2. Fee payer transaction: `fee = 2000` microAlgos (covers both)
+3. Both transactions share the same group ID
+4. Fee payer transaction is a zero-amount self-transfer (`pay` type)
+
+### Official Documentation Links
+
+- **Guide**: https://github.com/GoPlausible/.github/tree/main/profile/algorand-x402-guide
+- **Spec**: `scheme_exact_avm.md` in above directory
+- **Demo**: https://x402-avm.vercel.app/protected
+- **PR**: https://github.com/coinbase/x402/pull/361
+- **Fork**: https://github.com/GoPlausible/x402-avm/tree/branch-pr-361

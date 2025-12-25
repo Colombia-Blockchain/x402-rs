@@ -420,6 +420,14 @@ where
                     ))
                 }
             }
+            #[cfg(feature = "algorand")]
+            ExactPaymentPayload::Algorand(_algorand_payload) => {
+                // For now, allow Algorand transactions through (compliance will be added later)
+                tracing::debug!(
+                    "Algorand payment compliance check: allowing transaction (TODO: implement Algorand compliance)"
+                );
+                Ok(())
+            }
         }
     }
 }

@@ -111,6 +111,14 @@ pub enum Network {
     /// Fogo testnet (Solana Virtual Machine).
     #[serde(rename = "fogo-testnet")]
     FogoTestnet,
+    /// Algorand mainnet.
+    #[cfg(feature = "algorand")]
+    #[serde(rename = "algorand-mainnet")]
+    Algorand,
+    /// Algorand testnet.
+    #[cfg(feature = "algorand")]
+    #[serde(rename = "algorand-testnet")]
+    AlgorandTestnet,
 }
 
 impl Display for Network {
@@ -147,6 +155,10 @@ impl Display for Network {
             Network::StellarTestnet => write!(f, "stellar-testnet"),
             Network::Fogo => write!(f, "fogo"),
             Network::FogoTestnet => write!(f, "fogo-testnet"),
+            #[cfg(feature = "algorand")]
+            Network::Algorand => write!(f, "algorand-mainnet"),
+            #[cfg(feature = "algorand")]
+            Network::AlgorandTestnet => write!(f, "algorand-testnet"),
         }
     }
 }
@@ -192,6 +204,10 @@ impl FromStr for Network {
             "stellar-testnet" => Ok(Network::StellarTestnet),
             "fogo" => Ok(Network::Fogo),
             "fogo-testnet" => Ok(Network::FogoTestnet),
+            #[cfg(feature = "algorand")]
+            "algorand-mainnet" => Ok(Network::Algorand),
+            #[cfg(feature = "algorand")]
+            "algorand-testnet" => Ok(Network::AlgorandTestnet),
             _ => Err(NetworkParseError(s.to_string())),
         }
     }
@@ -203,6 +219,8 @@ pub enum NetworkFamily {
     Solana,
     Near,
     Stellar,
+    #[cfg(feature = "algorand")]
+    Algorand,
 }
 
 impl From<Network> for NetworkFamily {
@@ -239,6 +257,10 @@ impl From<Network> for NetworkFamily {
             Network::StellarTestnet => NetworkFamily::Stellar,
             Network::Fogo => NetworkFamily::Solana,
             Network::FogoTestnet => NetworkFamily::Solana,
+            #[cfg(feature = "algorand")]
+            Network::Algorand => NetworkFamily::Algorand,
+            #[cfg(feature = "algorand")]
+            Network::AlgorandTestnet => NetworkFamily::Algorand,
         }
     }
 }
@@ -283,6 +305,10 @@ impl Network {
 
     /// Returns true if this network is a testnet environment.
     pub fn is_testnet(&self) -> bool {
+        #[cfg(feature = "algorand")]
+        if matches!(self, Network::AlgorandTestnet) {
+            return true;
+        }
         matches!(
             self,
             Network::BaseSepolia
@@ -295,7 +321,7 @@ impl Network {
                 | Network::SeiTestnet
                 | Network::EthereumSepolia
                 | Network::ArbitrumSepolia
-                | Network::UnichainSepolia               
+                | Network::UnichainSepolia
                 | Network::NearTestnet
                 | Network::StellarTestnet
                 | Network::FogoTestnet
@@ -353,6 +379,11 @@ impl Network {
             // Fogo - fogo:{network_name}
             Network::Fogo => "fogo:mainnet".to_string(),
             Network::FogoTestnet => "fogo:testnet".to_string(),
+            // Algorand - algorand:{network_name}
+            #[cfg(feature = "algorand")]
+            Network::Algorand => "algorand:mainnet".to_string(),
+            #[cfg(feature = "algorand")]
+            Network::AlgorandTestnet => "algorand:testnet".to_string(),
         }
     }
 
@@ -398,7 +429,9 @@ impl Network {
             "fogo:mainnet" => Some(Network::Fogo),
             "fogo:testnet" => Some(Network::FogoTestnet),
             // Algorand
+            #[cfg(feature = "algorand")]
             "algorand:mainnet" => Some(Network::Algorand),
+            #[cfg(feature = "algorand")]
             "algorand:testnet" => Some(Network::AlgorandTestnet),
             _ => None,
         }
@@ -863,6 +896,7 @@ static USDC_FOGO_TESTNET: Lazy<USDCDeployment> = Lazy::new(|| {
 /// Lazily initialized known USDC deployment on Algorand mainnet as [`USDCDeployment`].
 /// Note: Algorand uses Asset IDs (ASA IDs) instead of contract addresses.
 /// USDC ASA ID on mainnet: 31566704
+#[cfg(feature = "algorand")]
 static USDC_ALGORAND: Lazy<USDCDeployment> = Lazy::new(|| {
     USDCDeployment(TokenDeployment {
         asset: TokenAsset {
@@ -877,6 +911,7 @@ static USDC_ALGORAND: Lazy<USDCDeployment> = Lazy::new(|| {
 /// Lazily initialized known USDC deployment on Algorand testnet as [`USDCDeployment`].
 /// Note: Algorand uses Asset IDs (ASA IDs) instead of contract addresses.
 /// USDC ASA ID on testnet: 10458941
+#[cfg(feature = "algorand")]
 static USDC_ALGORAND_TESTNET: Lazy<USDCDeployment> = Lazy::new(|| {
     USDCDeployment(TokenDeployment {
         asset: TokenAsset {
@@ -955,7 +990,9 @@ impl USDCDeployment {
             Network::StellarTestnet => &USDC_STELLAR_TESTNET,
             Network::Fogo => &USDC_FOGO,
             Network::FogoTestnet => &USDC_FOGO_TESTNET,
+            #[cfg(feature = "algorand")]
             Network::Algorand => &USDC_ALGORAND,
+            #[cfg(feature = "algorand")]
             Network::AlgorandTestnet => &USDC_ALGORAND_TESTNET,
         }
     }
