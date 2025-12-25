@@ -267,6 +267,7 @@ impl From<Network> for NetworkFamily {
 
 impl Network {
     /// Return all known [`Network`] variants.
+    #[cfg(feature = "algorand")]
     pub fn variants() -> &'static [Network] {
         &[
             Network::BaseSepolia,
@@ -292,7 +293,47 @@ impl Network {
             Network::Arbitrum,
             Network::ArbitrumSepolia,
             Network::Unichain,
-            Network::UnichainSepolia,            
+            Network::UnichainSepolia,
+            Network::Monad,
+            Network::Near,
+            Network::NearTestnet,
+            Network::Stellar,
+            Network::StellarTestnet,
+            Network::Fogo,
+            Network::FogoTestnet,
+            Network::Algorand,
+            Network::AlgorandTestnet,
+        ]
+    }
+
+    /// Return all known [`Network`] variants.
+    #[cfg(not(feature = "algorand"))]
+    pub fn variants() -> &'static [Network] {
+        &[
+            Network::BaseSepolia,
+            Network::Base,
+            Network::XdcMainnet,
+            Network::AvalancheFuji,
+            Network::Avalanche,
+            Network::XrplEvm,
+            Network::Solana,
+            Network::SolanaDevnet,
+            Network::PolygonAmoy,
+            Network::Polygon,
+            Network::Optimism,
+            Network::OptimismSepolia,
+            Network::Celo,
+            Network::CeloSepolia,
+            Network::HyperEvm,
+            Network::HyperEvmTestnet,
+            Network::Sei,
+            Network::SeiTestnet,
+            Network::Ethereum,
+            Network::EthereumSepolia,
+            Network::Arbitrum,
+            Network::ArbitrumSepolia,
+            Network::Unichain,
+            Network::UnichainSepolia,
             Network::Monad,
             Network::Near,
             Network::NearTestnet,
